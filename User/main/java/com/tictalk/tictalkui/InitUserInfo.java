@@ -51,7 +51,6 @@ public class InitUserInfo extends javax.swing.JFrame {
         jLabel5 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-        setPreferredSize(new java.awt.Dimension(1000, 600));
 
         jPanel1.setBackground(new java.awt.Color(255, 255, 255));
         jPanel1.setPreferredSize(new java.awt.Dimension(350, 0));
@@ -183,6 +182,7 @@ public class InitUserInfo extends javax.swing.JFrame {
 
         jPanel1.add(jPanel8);
 
+        jPanel2.setBackground(new java.awt.Color(218, 244, 242));
         jPanel2.setPreferredSize(new java.awt.Dimension(350, 450));
 
         jLabel5.setBackground(new java.awt.Color(255, 255, 255));
