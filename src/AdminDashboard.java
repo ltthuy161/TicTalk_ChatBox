@@ -3,6 +3,7 @@ import java.awt.*;
 
 public class AdminDashboard {
     private JFrame frame;
+    private JPanel mainPanel;
 
     public AdminDashboard() {
         frame = new JFrame("Admin Dashboard");
@@ -10,16 +11,19 @@ public class AdminDashboard {
         frame.setSize(800, 600);
 
         // Main panel with card layout
-        JPanel mainPanel = new JPanel(new CardLayout());
+        mainPanel = new JPanel(new CardLayout());
 
         // Add pages to main panel
         JPanel dashboardPanel = createDashboardPanel(mainPanel);
         JPanel userListPanel = new UserListPanel(mainPanel).getMainPanel();
-        JPanel loginHistoryPanel = createPlaceholderPanel("Lịch sử đăng nhập");
-        JPanel chatGroupsPanel = createPlaceholderPanel("Các nhóm chat");
-        JPanel spamPanel = createPlaceholderPanel("Spams");
-        JPanel newRegistrationPanel = createPlaceholderPanel("Đăng ký mới");
-        JPanel activeUsersPanel = createPlaceholderPanel("Đang hoạt động");
+        JPanel loginHistoryPanel = new LoginHistoryPanel(mainPanel).getPanel();
+        JPanel chatGroupsPanel = new ChatGroupsPanel(mainPanel).getMainPanel();
+        JPanel spamPanel = new SpamReportsPanel(mainPanel).getMainPanel();
+        JPanel newRegistrationPanel = new RegistrationListPanel(mainPanel).getMainPanel();
+        JPanel activeUsersPanel = new ActiveUsersPanel(mainPanel).getMainPanel();
+        JPanel registrationChartPanel = new RegistrationChartPanel(mainPanel).getMainPanel();
+        JPanel activeUsersChartPanel = new ActiveUsersChartPanel(mainPanel).getMainPanel();
+        JPanel usersAndFriendsPanel = new UsersAndFriendsPanel(mainPanel).getMainPanel();
 
         mainPanel.add(dashboardPanel, "Dashboard");
         mainPanel.add(userListPanel, "UserList");
@@ -28,6 +32,9 @@ public class AdminDashboard {
         mainPanel.add(spamPanel, "Spams");
         mainPanel.add(newRegistrationPanel, "NewRegistration");
         mainPanel.add(activeUsersPanel, "ActiveUsers");
+        mainPanel.add(registrationChartPanel, "RegistrationChart");
+        mainPanel.add(activeUsersChartPanel, "ActiveUsersChart");
+        mainPanel.add(usersAndFriendsPanel, "UsersAndFriends");
 
         // Show the main dashboard
         CardLayout cl = (CardLayout) mainPanel.getLayout();
@@ -45,13 +52,15 @@ public class AdminDashboard {
         headerLabel.setFont(new Font("Arial", Font.BOLD, 24));
         headerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Buttons for each page
         JButton userListButton = new JButton("Quản lý người dùng");
         JButton loginHistoryButton = new JButton("Lịch sử đăng nhập");
         JButton chatGroupsButton = new JButton("Các nhóm chat");
         JButton spamButton = new JButton("Spams");
         JButton newRegistrationButton = new JButton("Đăng ký mới");
         JButton activeUsersButton = new JButton("Đang hoạt động");
+        JButton registrationChartButton = new JButton("Biểu đồ người dùng đăng kí mới");
+        JButton activeUsersChartButton = new JButton("Biểu đồ người dùng hoạt động");
+        JButton usersAndFriendsButton = new JButton("Danh sách bạn bè người dùng");
 
         // Set button actions
         userListButton.addActionListener(e -> switchToPanel(mainPanel, "UserList"));
@@ -60,8 +69,10 @@ public class AdminDashboard {
         spamButton.addActionListener(e -> switchToPanel(mainPanel, "Spams"));
         newRegistrationButton.addActionListener(e -> switchToPanel(mainPanel, "NewRegistration"));
         activeUsersButton.addActionListener(e -> switchToPanel(mainPanel, "ActiveUsers"));
+        registrationChartButton.addActionListener(e -> switchToPanel(mainPanel, "RegistrationChart"));
+        activeUsersChartButton.addActionListener(e -> switchToPanel(mainPanel, "ActiveUsersChart"));
+        usersAndFriendsButton.addActionListener(e -> switchToPanel(mainPanel, "UsersAndFriends"));
 
-        // Add components to the dashboard panel
         dashboardPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         dashboardPanel.add(headerLabel);
         dashboardPanel.add(Box.createRigidArea(new Dimension(0, 20)));
@@ -76,21 +87,14 @@ public class AdminDashboard {
         dashboardPanel.add(newRegistrationButton);
         dashboardPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         dashboardPanel.add(activeUsersButton);
+        dashboardPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        dashboardPanel.add(registrationChartButton);
+        dashboardPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        dashboardPanel.add(activeUsersChartButton);
+        dashboardPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        dashboardPanel.add(usersAndFriendsButton);
 
         return dashboardPanel;
-    }
-
-    private JPanel createPlaceholderPanel(String title) {
-        JPanel panel = new JPanel(new BorderLayout());
-        JLabel label = new JLabel(title, SwingConstants.CENTER);
-        label.setFont(new Font("Arial", Font.BOLD, 20));
-        panel.add(label, BorderLayout.CENTER);
-
-        JButton backButton = new JButton("Quay lại Dashboard");
-        backButton.addActionListener(e -> switchToPanel((JPanel) panel.getParent(), "Dashboard"));
-        panel.add(backButton, BorderLayout.SOUTH);
-
-        return panel;
     }
 
     private void switchToPanel(JPanel mainPanel, String panelName) {
