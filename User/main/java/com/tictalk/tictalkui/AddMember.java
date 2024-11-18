@@ -93,7 +93,7 @@ public class AddMember extends javax.swing.JFrame {
 
         jPanel1.setBackground(new java.awt.Color(253, 214, 181));
 
-        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/exit (2).png"))); // NOI18N
+        jLabel1.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/user.png"))); // NOI18N
 
         jLabel2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/search.png"))); // NOI18N
 
