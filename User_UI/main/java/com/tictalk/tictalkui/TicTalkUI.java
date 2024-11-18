@@ -13,7 +13,7 @@ public class TicTalkUI {
     public static void main(String[] args) {
         java.awt.EventQueue.invokeLater(new Runnable() {
             public void run() {
-                new Search().setVisible(true);
+                new Profile().setVisible(true);
             }
         });
     }
