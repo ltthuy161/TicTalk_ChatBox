@@ -4,28 +4,79 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="268e72ab-03e1-41e2-aa67-47caf2cc07ba" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/jcommon_1_0_8.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/libraries/jfreechart_1_5_3.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/ActiveUsersChartPanel.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/UsersAndFriendsPanel.java" afterDir="false" />
+    <list default="true" id="268e72ab-03e1-41e2-aa67-47caf2cc07ba" name="Changes" comment="update admin">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TicTalk.iml" beforeDir="false" afterPath="$PROJECT_DIR$/TicTalk.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TicTalk/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/TicTalk/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/AdminDashboard.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/TicTalk/AdminDashboard.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/AbstractLayout.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/DimensionInfo.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/GridConstraints.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/GridLayoutManager.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/HorizontalInfo.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/LayoutState.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/Spacer.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/SupportCode$TextWithMnemonic.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/SupportCode.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/Util.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/com/intellij/uiDesigner/core/VerticalInfo.class" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/AdminDashboard.class" beforeDir="false" afterPath="$PROJECT_DIR$/src/AdminDashboard.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/AdminDashboard.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/AdminDashboard.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Chat.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Chat.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/CreateGroupChat.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/CreateGroupChat.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendAction.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendAction.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendList.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendList.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendRequest.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/FriendRequest.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/InitResetPassword.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/InitResetPassword.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/InitUserInfo.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/InitUserInfo.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Login.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Login.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Search.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Search.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Signup.form" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/Signup.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/java/com/tictalk/tictalkui/TicTalkUI.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/bell-notification-social-media.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/comment.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/exit (2).png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/girl.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/man (1).png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/man.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/menu.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/plus.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/search.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/send.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/speech-bubble-2.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/speech-bubble.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/user.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/users.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/User/main/resources/images/woman.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/AddUserDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/AdminDashboard.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/DeleteUserHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/EditUserDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/EditUserHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/FriendListDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/LockUnlockHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/Main.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/UpdatePasswordDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/UserListPanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/TicTalk/ViewHistoryDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ActiveUsersChartPanel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AddUserDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AddUserDialog.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AdminDashboard.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/AdminDashboard.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DeleteUserHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/DeleteUserHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EditUserDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EditUserDialog.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EditUserHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/EditUserHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/FriendListDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/FriendListDialog.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/LockUnlockHandler.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/LockUnlockHandler.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/Main.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UpdatePasswordDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UpdatePasswordDialog.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UserListPanel.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UserListPanel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/UsersAndFriendsPanel.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ViewHistoryDialog.class" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/ViewHistoryDialog.java" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,6 +93,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ltthuy161&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/ltthuy161/TicTalk_ChatBox.git&quot;,
+    &quot;accountId&quot;: &quot;3a49f31e-c557-4006-b68c-d22d1324c44f&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 1
 }</component>
@@ -50,38 +113,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.AdminDashboard.executor": "Run",
-    "Application.Main.executor": "Run",
-    "Application.UserList.executor": "Run",
-    "Application.UserListMain.executor": "Run",
-    "Application.main.executor": "Run",
-    "Downloaded.Files.Path.Enabled": "false",
-    "Repository.Attach.Annotations": "false",
-    "Repository.Attach.JavaDocs": "false",
-    "Repository.Attach.Sources": "false",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "UI_DESIGNER_EDITOR_MODE.PaletteManager.WIDTH": "188",
-    "UI_DESIGNER_EDITOR_MODE.UIDesignerToolWindowManager.WIDTH": "452",
-    "dart.analysis.tool.window.visible": "false",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/thanhthuy/Downloads/TicTalk",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "onboarding.tips.debug.path": "/Users/avietechy/IdeaProjects/TicTalk/src/Main.java",
-    "project.structure.last.edited": "Libraries",
-    "project.structure.proportion": "0.15",
-    "project.structure.side.proportion": "0.2",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.AdminDashboard.executor&quot;: &quot;Run&quot;,
+    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
+    &quot;Application.UserList.executor&quot;: &quot;Run&quot;,
+    &quot;Application.UserListMain.executor&quot;: &quot;Run&quot;,
+    &quot;Application.main.executor&quot;: &quot;Run&quot;,
+    &quot;Downloaded.Files.Path.Enabled&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Annotations&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.JavaDocs&quot;: &quot;false&quot;,
+    &quot;Repository.Attach.Sources&quot;: &quot;false&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;UI_DESIGNER_EDITOR_MODE.PaletteManager.WIDTH&quot;: &quot;188&quot;,
+    &quot;UI_DESIGNER_EDITOR_MODE.UIDesignerToolWindowManager.WIDTH&quot;: &quot;452&quot;,
+    &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/thanhthuy/Downloads/TicTalk&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;onboarding.tips.debug.path&quot;: &quot;/Users/avietechy/IdeaProjects/TicTalk/src/Main.java&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Libraries&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Application.main">
     <configuration name="AdminDashboard" type="Application" factoryName="Application" temporary="true" nameIsGenerated="true">
       <option name="MAIN_CLASS_NAME" value="AdminDashboard" />
@@ -144,14 +207,42 @@
       <workItem from="1731598584617" duration="6491000" />
       <workItem from="1731730538459" duration="511000" />
       <workItem from="1731735185334" duration="212000" />
-      <workItem from="1731735675484" duration="18321000" />
+      <workItem from="1731735675484" duration="18482000" />
+      <workItem from="1731831281530" duration="109000" />
+      <workItem from="1731833115156" duration="3631000" />
+      <workItem from="1731866232489" duration="300000" />
+      <workItem from="1731866618684" duration="7309000" />
     </task>
+    <task id="LOCAL-00001" summary="update admin">
+      <option name="closed" value="true" />
+      <created>1731830959813</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1731830959813</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="RECENT_FILTERS">
+      <map>
+        <entry key="Branch">
+          <value>
+            <list>
+              <RecentGroup>
+                <option name="FILTER_VALUES">
+                  <option value="origin/main" />
+                </option>
+              </RecentGroup>
+            </list>
+          </value>
+        </entry>
+      </map>
+    </option>
     <option name="TAB_STATES">
       <map>
         <entry key="MAIN">
@@ -161,5 +252,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="update admin" />
+    <option name="LAST_COMMIT_MESSAGE" value="update admin" />
   </component>
 </project>
