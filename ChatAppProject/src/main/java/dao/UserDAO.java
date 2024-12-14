@@ -1,10 +1,12 @@
 package dao;
 
+import dto.ChatMessage;
 import dto.User;
 import dto.FriendRequest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -103,6 +105,38 @@ public class UserDAO {
         }
     }
 
+    public boolean setUserOnline(String username) {
+        String sql = "UPDATE Users SET IsOnline = TRUE WHERE Username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+
+            int affectedRows = stmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Handle the exception appropriately (log, rethrow, etc.)
+            return false;
+        }
+    }
+
+    public boolean setUserOffline(String username) {
+        String sql = "UPDATE Users SET IsOnline = FALSE WHERE Username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+
+            int affectedRows = stmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Handle the exception appropriately (log, rethrow, etc.)
+            return false;
+        }
+    }
+
     // In UserDAO class:
     public List<User> getFriendList(String username) {
         List<User> friends = new ArrayList<>();
@@ -195,12 +229,14 @@ public class UserDAO {
 
     public List<User> searchUsersByUsername(String username, String searchText) {
         List<User> results = new ArrayList<>();
-        String sql = "SELECT * FROM Users u WHERE u.Username LIKE ? AND u.Username NOT IN (SELECT BlockedUsername FROM BlockedUsers WHERE BlockerUsername = ?)";
+        String sql = "SELECT * FROM Users u WHERE u.Username LIKE ? AND (u.Username NOT IN (SELECT BlockedUsername FROM BlockedUsers WHERE BlockerUsername = ?)" +
+                "AND u.Username NOT IN (SELECT BlockerUsername FROM BlockedUsers WHERE BlockedUsername = ?))";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, "%" + searchText + "%"); // Use % for partial matching
             stmt.setString(2, username);
+            stmt.setString(3, username);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
                     User user = new User();
@@ -342,6 +378,7 @@ public class UserDAO {
             return false;
         }
     }
+
     public FriendRequest getFriendRequestById(int requestId) {
         String sql = "SELECT * FROM FriendRequests WHERE RequestID = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -364,6 +401,82 @@ public class UserDAO {
             // Handle exception
         }
         return null;
+    }
+
+    public boolean sendMessage(String sender, String receiver, String message) {
+        String sql = "INSERT INTO PeopleChat (SenderUsername, ReceiverUsername, Message) VALUES (?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, sender);
+            stmt.setString(2, receiver);
+            stmt.setString(3, message);
+
+            int affectedRows = stmt.executeUpdate();
+            return affectedRows > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle exception (log, inform user, etc.)
+            return false;
+        }
+    }
+
+    public List<ChatMessage> getChatMessages(String user1, String user2) {
+        List<ChatMessage> messages = new ArrayList<>();
+        String sql = "SELECT SenderUsername, Message, Timestamp FROM PeopleChat " +
+                "WHERE (SenderUsername = ? AND ReceiverUsername = ?) OR (SenderUsername = ? AND ReceiverUsername = ?) " +
+                "ORDER BY Timestamp ASC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, user1);
+            stmt.setString(2, user2);
+            stmt.setString(3, user2);
+            stmt.setString(4, user1);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ChatMessage message = new ChatMessage(
+                            rs.getString("SenderUsername"),
+                            rs.getString("Message"),
+                            rs.getTimestamp("Timestamp")
+                    );
+                    messages.add(message);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Handle exception
+        }
+        return messages;
+    }
+
+    public List<User> getOnlineFriends(String username) {
+        List<User> onlineFriends = new ArrayList<>();
+        String sql = "SELECT u.* FROM Users u " +
+                "INNER JOIN Friends f ON (u.Username = f.Username1 AND f.Username2 = ?) " +
+                "OR (u.Username = f.Username2 AND f.Username1 = ?) " +
+                "WHERE u.IsOnline = TRUE";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+            stmt.setString(2, username);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    User friend = new User();
+                    friend.setUsername(rs.getString("Username"));
+                    friend.setFullName(rs.getString("FullName"));
+                    // ... Set other properties if needed ...
+                    onlineFriends.add(friend);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Handle the exception appropriately
+        }
+        return onlineFriends;
     }
 
 }

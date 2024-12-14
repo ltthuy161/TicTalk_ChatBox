@@ -1,6 +1,7 @@
 package bus;
 
 import dao.UserDAO;
+import dto.ChatMessage;
 import dto.User;
 import dto.FriendRequest;
 import java.util.Random;
@@ -103,6 +104,14 @@ public class UserBUS {
         return userDAO.authenticateUser(username, password);
     }
 
+    public void setUserOnline(String username) {
+        userDAO.setUserOnline(username);
+    }
+
+    public void setUserOffline(String username) {
+        userDAO.setUserOffline(username);
+    }
+
     public List<User> getFriendList(String username) {
         return userDAO.getFriendList(username);
     }
@@ -183,4 +192,16 @@ public class UserBUS {
         return userDAO.updateFriendRequestStatus(requestId, "Rejected");
     }
 
+    // In UserBUS.java
+    public boolean sendMessage(String sender, String receiver, String message) {
+        return userDAO.sendMessage(sender, receiver, message);
+    }
+
+    public List<ChatMessage> getChatMessages(String user1, String user2) {
+        return userDAO.getChatMessages(user1, user2);
+    }
+
+    public List<User> getOnlineFriends(String username) {
+            return userDAO.getOnlineFriends(username);
+    }
 }

@@ -1,10 +1,14 @@
 package presentation;
 
+import dto.ChatMessage;
 import dto.User;
 import dto.FriendRequest;
 import bus.UserBUS;
 import javax.swing.*;
+import javax.swing.border.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
@@ -12,13 +16,23 @@ import java.util.Comparator;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 import java.util.Date;
+import java.io.*;
+import java.net.*;
 
-public class ChatApp {
+public class ChatApp implements Runnable{
     private static final int CARD_HEIGHT = 60;
     private static User loggedInUser;
 
+    //socket
+    private static Socket socket;
+    private static PrintWriter out;
+    private static BufferedReader in;
+    private static String serverAddress = "localhost"; // Server IP (change if needed)
+    private static int serverPort = 5000; // Server Port (match the ChatServer)
+
     public static void main(User user) {
         loggedInUser = user;
+
         // Create the main frame
         JFrame frame = new JFrame("Chat App");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -41,6 +55,18 @@ public class ChatApp {
         // Add sidebar and content to the frame
         frame.add(sidebar, BorderLayout.WEST);
         frame.add(contentPanel, BorderLayout.CENTER);
+
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if (loggedInUser != null) {
+                    UserBUS userBUS = new UserBUS();
+                    userBUS.setUserOffline(loggedInUser.getUsername());
+                }
+                System.out.println("Application is closing. User set to offline.");
+            }
+        });
+
 
         frame.setVisible(true);
     }
@@ -372,6 +398,24 @@ public class ChatApp {
         // Fetch and display the friend list for the current user
         UserBUS userBUS = new UserBUS(); // Create an instance of UserBUS
         List<User> friends = userBUS.getFriendList(currentUser.getUsername()); // Fetch the friend list
+        updateFriendListPanel(friendsPanel, friends);
+
+        // Add action listener to the filter combo box
+        filterComboBox.addActionListener(e -> {
+            String selectedFilter = (String) filterComboBox.getSelectedItem();
+            List<User> filteredFriends;
+
+            if ("Online".equals(selectedFilter)) {
+                // Filter for online friends only
+                filteredFriends = userBUS.getOnlineFriends(currentUser.getUsername());
+            } else {
+                // "All" is selected, show all friends
+                filteredFriends = userBUS.getFriendList(currentUser.getUsername());
+            }
+
+            // Update the friend list panel
+            updateFriendListPanel(friendsPanel, filteredFriends);
+        });
 
         // Add friends to the panel
         if (friends != null && !friends.isEmpty()) {
@@ -443,6 +487,25 @@ public class ChatApp {
         });
     }
 
+    private static void updateFriendListPanel(JPanel friendsPanel, List<User> friends) {
+        friendsPanel.removeAll(); // Clear existing friends
+
+        if (friends != null && !friends.isEmpty()) {
+            Collections.sort(friends, Comparator.comparing(User::getUsername, String.CASE_INSENSITIVE_ORDER));
+
+            for (User friend : friends) {
+                friendsPanel.add(createFriendCard(friend.getUsername()));
+            }
+        } else {
+            JLabel noFriendsLabel = new JLabel("No friends found.");
+            noFriendsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            friendsPanel.add(noFriendsLabel);
+        }
+
+        friendsPanel.revalidate();
+        friendsPanel.repaint();
+    }
+
     private static void openFriendRequestScreen(JFrame frame) {
         // List to store friend requests
         ArrayList<String> friendRequests = new ArrayList<>();
@@ -496,6 +559,7 @@ public class ChatApp {
         frame.revalidate();
         frame.repaint();
     }
+
     private static void openChatHistoryScreen(JFrame frame) {
         // Create the chat history panel
         JPanel chatHistoryPanel = new JPanel();
@@ -571,25 +635,115 @@ public class ChatApp {
         frame.repaint();
     }
 
-    private static JPanel createChatCard(String conversationName, JFrame frame) {
-        JPanel card = new JPanel();
-        card.setLayout(new BorderLayout());
-        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        card.setBackground(new Color(240, 240, 240));
-        card.setPreferredSize(new Dimension(card.getPreferredSize().width, CARD_HEIGHT));
-        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+    private static void openChatScreen(JFrame frame, User currentUser, String otherUsername) {
+        // Main content panel
+        JPanel contentPanel = new JPanel(new BorderLayout());
 
-        // Conversation name label
-        JLabel nameLabel = new JLabel(conversationName);
-        nameLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        card.add(nameLabel, BorderLayout.WEST);
+        // Search bar panel
+        JPanel searchPanel = new JPanel(new BorderLayout());
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        JTextField searchField = new JTextField();
+        JButton searchButton = new JButton("Search");
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        searchPanel.add(searchButton, BorderLayout.EAST);
+        contentPanel.add(searchPanel, BorderLayout.NORTH); // Add search panel to the top
 
-        // View button
-        JButton viewButton = new JButton("View");
-        viewButton.addActionListener(e -> openConversationDetailScreen(frame, conversationName));
-        card.add(viewButton, BorderLayout.EAST);
+        // Panel for displaying messages
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(chatPanel);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
 
-        return card;
+        // Panel for message input
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new BorderLayout());
+        JTextField messageField = new JTextField();
+        JButton sendButton = new JButton("Send");
+        inputPanel.add(messageField, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
+        contentPanel.add(inputPanel, BorderLayout.SOUTH);
+
+        // Load and display previous messages
+        UserBUS userBUS = new UserBUS();
+        List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
+        for (ChatMessage message : previousMessages) {
+            displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+        }
+
+        // Action listener for the Send button
+        sendButton.addActionListener(e -> {
+            String messageText = messageField.getText().trim();
+            if (!messageText.isEmpty()) {
+                // Display the message on the chat screen
+                displayMessage(chatPanel, messageText, false, otherUsername);
+
+                // Send the message (using UserBUS)
+                boolean success = userBUS.sendMessage(currentUser.getUsername(), otherUsername, messageText);
+                if (!success) {
+                    JOptionPane.showMessageDialog(contentPanel, "Error sending message.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+
+                messageField.setText(""); // Clear the message field
+            }
+        });
+
+        // Action listener for the Search button
+        searchButton.addActionListener(e -> {
+            String searchText = searchField.getText().trim();
+            if (!searchText.isEmpty()) {
+                searchMessages(chatPanel, previousMessages, searchText, currentUser, otherUsername);
+            } else {
+                // If search text is empty, redisplay all messages
+                chatPanel.removeAll();
+                for (ChatMessage message : previousMessages) {
+                    displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+                }
+                chatPanel.revalidate();
+                chatPanel.repaint();
+            }
+        });
+
+        // Replace the current content panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(contentPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    private static void searchMessages(JPanel chatPanel, List<ChatMessage> messages, String searchText, User currentUser, String otherUsername) {
+        chatPanel.removeAll(); // Clear current messages
+
+        for (ChatMessage message : messages) {
+            // Check if the message text contains the search text (case-insensitive)
+            if (message.getMessage().toLowerCase().contains(searchText.toLowerCase())) {
+                displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+            }
+        }
+
+        chatPanel.revalidate();
+        chatPanel.repaint();
+    }
+
+    // Helper method to display a message in the chatPanel
+    private static void displayMessage(JPanel chatPanel, String message, boolean isReceived, String otherUsername) {
+        String currentUsername = getCurrentUser().getUsername();
+        String senderUsername = isReceived ? otherUsername : currentUsername; // Determine sender based on isReceived
+
+        // Get the current timestamp in the desired format
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+        String timestamp = dateFormat.format(new Date());
+
+        JPanel messageCard = createMessageCard(senderUsername, message, timestamp); // Use createMessageCard
+
+        chatPanel.add(messageCard);
+
+        // Scroll to the bottom
+        JScrollBar verticalScrollBar = ((JScrollPane) chatPanel.getParent().getParent()).getVerticalScrollBar();
+        verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+
+        chatPanel.revalidate();
+        chatPanel.repaint();
     }
 
     private static JPanel createMessageCard(String username, String message, String timestamp) {
@@ -618,6 +772,27 @@ public class ChatApp {
 
         card.add(textPanel, BorderLayout.CENTER);
         card.add(timestampLabel, BorderLayout.EAST);
+
+        return card;
+    }
+
+    private static JPanel createChatCard(String conversationName, JFrame frame) {
+        JPanel card = new JPanel();
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.setBackground(new Color(240, 240, 240));
+        card.setPreferredSize(new Dimension(card.getPreferredSize().width, CARD_HEIGHT));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        // Conversation name label
+        JLabel nameLabel = new JLabel(conversationName);
+        nameLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        card.add(nameLabel, BorderLayout.WEST);
+
+        // View button
+        JButton viewButton = new JButton("View");
+        viewButton.addActionListener(e -> openConversationDetailScreen(frame, conversationName));
+        card.add(viewButton, BorderLayout.EAST);
 
         return card;
     }
@@ -713,6 +888,12 @@ public class ChatApp {
         // Common buttons: Chat
         JButton chatButton = new JButton("Chat");
         buttonPanel.add(chatButton);
+        chatButton.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(resCard);
+            // Open chat screen with the selected user
+            User currentUser = getCurrentUser();
+            openChatScreen(frame, currentUser, username);
+        });
 
         // Conditional buttons based on friendship status
         if (isFriend) {
@@ -863,6 +1044,12 @@ public class ChatApp {
         buttonPanel.add(blockButton); // Add Block button to panel
 
         friendCard.add(buttonPanel, BorderLayout.EAST);
+        chatButton.addActionListener(e -> {
+            JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(friendCard);
+            // Open chat screen with the selected user
+            User currentUser = getCurrentUser();
+            openChatScreen(frame, currentUser, username);
+        });
         unfriendButton.addActionListener(e -> {
             // Get the currently logged-in user
             User currentUser = getCurrentUser();
@@ -927,4 +1114,9 @@ public class ChatApp {
         return friendCard;
     }
 
+
+    @Override
+    public void run() {
+
+    }
 }

@@ -237,6 +237,9 @@ public class Login extends javax.swing.JFrame {
             JOptionPane.showMessageDialog(this, "Sign in successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
 
             //TODO: Open the main application window or perform other actions after successful sign-in
+            // Update IsOnline status to TRUE
+            userBUS.setUserOnline(user.getUsername());
+
             ChatApp.main(user);
             this.dispose();
         } else {
