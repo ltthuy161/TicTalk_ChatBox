@@ -1,4 +1,5 @@
 package gui;
+
 import utils.DBConnection;
 
 import javax.swing.*;
@@ -8,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ViewHistoryDialog {
     private final JPanel parentPanel;
@@ -39,7 +42,7 @@ public class ViewHistoryDialog {
         Object[][] loginHistory = fetchLoginHistory(username);
 
         // Define table columns
-        String[] columnNames = {"Login time", "Địa chỉ IP"};
+        String[] columnNames = {"Login time"};
 
         // Create the table with fetched data
         JTable historyTable = new JTable(loginHistory, columnNames);
@@ -55,8 +58,8 @@ public class ViewHistoryDialog {
 
     // Method to fetch login history from the database
     private Object[][] fetchLoginHistory(String username) {
-        String query = "SELECT login_time, ip_address FROM login_history WHERE username = ?";
-        Object[][] data = new Object[0][0];
+        String query = "SELECT logintime FROM loginhistory WHERE username = ?";
+        List<Object[]> dataList = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -64,19 +67,9 @@ public class ViewHistoryDialog {
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
 
-            // Count rows to initialize the 2D array with the correct size
-            int rowCount = 0;
             while (rs.next()) {
-                rowCount++;
-            }
-            rs.beforeFirst(); // Reset the cursor to the beginning
-
-            data = new Object[rowCount][2];
-            int i = 0;
-            while (rs.next()) {
-                data[i][0] = rs.getString("login_time");
-                data[i][1] = rs.getString("ip_address");
-                i++;
+                // Add each login time to the data list
+                dataList.add(new Object[]{rs.getString("logintime")});
             }
 
         } catch (SQLException e) {
@@ -84,6 +77,7 @@ public class ViewHistoryDialog {
             e.printStackTrace();
         }
 
-        return data;
+        // Convert the list to a 2D array
+        return dataList.toArray(new Object[0][0]);
     }
 }

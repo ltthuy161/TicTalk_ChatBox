@@ -1,4 +1,5 @@
 package gui;
+
 import utils.DBConnection;
 
 import javax.swing.*;
@@ -7,6 +8,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FriendListDialog {
     private final JPanel parentPanel;
@@ -54,31 +57,37 @@ public class FriendListDialog {
 
     // Method to fetch friend list from the database
     private Object[][] fetchFriendList(String username) {
-        String query = "SELECT f.username, u.full_name " +
-                       "FROM friends f " +
-                       "JOIN users u ON f.friend_username = u.username " +
-                       "WHERE f.username = ?";
-        Object[][] data = new Object[0][0];
+        String query = "SELECT " +
+                "    CASE " +
+                "        WHEN f.username1 = ? THEN f.username2 " +
+                "        ELSE f.username1 " +
+                "    END AS friend_username, " +
+                "    u.fullname AS friend_fullname " +
+                "FROM " +
+                "    friends f " +
+                "JOIN " +
+                "    users u " +
+                "    ON u.username = CASE " +
+                "                       WHEN f.username1 = ? THEN f.username2 " +
+                "                       ELSE f.username1 " +
+                "                   END " +
+                "WHERE " +
+                "    ? IN (f.username1, f.username2)";
+        List<Object[]> dataList = new ArrayList<>();
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
 
             stmt.setString(1, username);
+            stmt.setString(2, username);
+            stmt.setString(3, username);
+
             ResultSet rs = stmt.executeQuery();
 
-            // Count rows to initialize the 2D array with the correct size
-            int rowCount = 0;
             while (rs.next()) {
-                rowCount++;
-            }
-            rs.beforeFirst(); // Reset the cursor to the beginning
-
-            data = new Object[rowCount][2];
-            int i = 0;
-            while (rs.next()) {
-                data[i][0] = rs.getString("username");
-                data[i][1] = rs.getString("full_name");
-                i++;
+                String friendUsername = rs.getString("friend_username");
+                String friendFullname = rs.getString("friend_fullname");
+                dataList.add(new Object[]{friendUsername, friendFullname});
             }
 
         } catch (SQLException e) {
@@ -86,6 +95,6 @@ public class FriendListDialog {
             e.printStackTrace();
         }
 
-        return data;
+        return dataList.toArray(new Object[0][0]);
     }
 }

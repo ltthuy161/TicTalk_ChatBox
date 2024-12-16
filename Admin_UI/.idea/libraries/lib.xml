@@ -4,6 +4,8 @@
       <root url="jar://$PROJECT_DIR$/lib/jcommon-1.0.8.jar!/" />
       <root url="jar://$PROJECT_DIR$/lib/jfreechart-1.5.3.jar!/" />
       <root url="jar://$USER_HOME$/Downloads/pgJDBC 42.7.4.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/JavaMail.jar!/" />
+      <root url="jar://$USER_HOME$/Downloads/Java Activation.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

@@ -20,8 +20,8 @@ public class ActiveUsersChartPanel {
 
         // Header panel
         JPanel headerPanel = new JPanel(new BorderLayout());
-        JButton backButton = new JButton("Quay lại Dashboard");
-        JLabel headerLabel = new JLabel("Biểu đồ số lượng người hoạt động theo năm", SwingConstants.CENTER);
+        JButton backButton = new JButton("Return Dashboard");
+        JLabel headerLabel = new JLabel("Chart of Active Users Yearly", SwingConstants.CENTER);
         headerLabel.setFont(new Font("Arial", Font.BOLD, 18));
 
         // Back button action
@@ -38,7 +38,7 @@ public class ActiveUsersChartPanel {
         headerPanel.add(headerLabel, BorderLayout.CENTER);
 
         // Select year button
-        JButton selectYearButton = new JButton("Chọn năm");
+        JButton selectYearButton = new JButton("Select Year");
         selectYearButton.addActionListener(e -> showYearSelectionDialog());
 
         // Add components to main panel
@@ -51,7 +51,7 @@ public class ActiveUsersChartPanel {
     }
 
     private void showYearSelectionDialog() {
-        String year = JOptionPane.showInputDialog("Nhập năm (ví dụ: 2024):");
+        String year = JOptionPane.showInputDialog("Enter year (ex: 2024):");
 
         if (year != null && !year.trim().isEmpty()) {
             try {
@@ -59,7 +59,7 @@ public class ActiveUsersChartPanel {
                 Map<Integer, Integer> monthlyData = getMonthlyActiveUsersData(selectedYear);
                 drawBarChart(selectedYear, monthlyData);
             } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(null, "Vui lòng nhập năm hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Please enter correct year!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -71,9 +71,12 @@ public class ActiveUsersChartPanel {
             monthlyData.put(i, 0);
         }
 
-        String query = "SELECT EXTRACT(MONTH FROM activity_date) AS month, COUNT(*) AS count " +
-                       "FROM user_activity WHERE EXTRACT(YEAR FROM activity_date) = ? " +
-                       "GROUP BY month ORDER BY month";
+        String query = "SELECT EXTRACT(MONTH FROM lh.LoginTime) AS month, " +
+                "COUNT(*) AS count " +
+                "FROM LoginHistory lh " +
+                "WHERE EXTRACT(YEAR FROM lh.LoginTime) = ? " +
+                "GROUP BY EXTRACT(MONTH FROM lh.LoginTime) " +
+                "ORDER BY month";
 
         try (Connection conn = DBConnection.getConnection(); // Ensure DBConnection is properly set up
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -88,7 +91,7 @@ public class ActiveUsersChartPanel {
                 }
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "Lỗi kết nối cơ sở dữ liệu!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Database connection error!", "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
 
@@ -101,13 +104,13 @@ public class ActiveUsersChartPanel {
         for (Map.Entry<Integer, Integer> entry : monthlyData.entrySet()) {
             int month = entry.getKey();
             int count = entry.getValue();
-            dataset.addValue(count, "Số lượng", "Tháng " + month);
+            dataset.addValue(count, "Number of Active User", "Month " + month);
         }
 
         JFreeChart barChart = ChartFactory.createBarChart(
-                "Số lượng người hoạt động - Năm " + year,
-                "Tháng",
-                "Số lượng người mở ứng dụng",
+                "Number of Active Users - Year " + year,
+                "Month",
+                "Number of Active Users",
                 dataset
         );
 
@@ -116,7 +119,7 @@ public class ActiveUsersChartPanel {
 
         // Show the chart in a new dialog
         JDialog chartDialog = new JDialog();
-        chartDialog.setTitle("Biểu đồ số lượng người hoạt động");
+        chartDialog.setTitle("Chart of Active Users");
         chartDialog.setSize(800, 600);
         chartDialog.add(chartPanel);
         chartDialog.setLocationRelativeTo(null);

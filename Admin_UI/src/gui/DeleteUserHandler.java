@@ -23,7 +23,7 @@ public class DeleteUserHandler {
         int selectedRow = userTable.getSelectedRow();
 
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(parentPanel, "Select an account!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(parentPanel, "Please select an account!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -34,36 +34,55 @@ public class DeleteUserHandler {
         String username = (String) tableModel.getValueAt(selectedRow, 0);
 
         // Confirm deletion
-        int confirm = JOptionPane.showConfirmDialog(parentPanel, "Want to delete this account?", "Confirm",
-                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        int confirm = JOptionPane.showConfirmDialog(parentPanel,
+                "Are you sure you want to delete this account?",
+                "Confirm Deletion",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
 
         if (confirm == JOptionPane.YES_OPTION) {
-            // Delete from the table
-            tableModel.removeRow(selectedRow);
+            // Attempt to delete the user and related data
+            if (deleteUserFromDatabase(username)) {
+                // Remove from the table if successful
+                tableModel.removeRow(selectedRow);
+                JOptionPane.showMessageDialog(parentPanel, "Account deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
 
-            // Delete from the database
-            deleteUserFromDatabase(username);
-
-            // Show success message
-            JOptionPane.showMessageDialog(parentPanel, "This account has been deleted!", "Announcement", JOptionPane.INFORMATION_MESSAGE);
+                // Notify other components to refresh
+                notifyUserDeleted(username);
+            } else {
+                JOptionPane.showMessageDialog(parentPanel, "Failed to delete the account from the database!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 
-    private void deleteUserFromDatabase(String username) {
-        Connection conn = DBConnection.getConnection();
+    private boolean deleteUserFromDatabase(String username) {
+        String sql = "DELETE FROM Users WHERE Username = ?";
 
-        String sql = "DELETE FROM users WHERE username = ?";  // Adjust table/column names if necessary
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
             stmt.setString(1, username);
             int rowsAffected = stmt.executeUpdate();
+
             if (rowsAffected > 0) {
-                System.out.println("User deleted successfully from the database.");
+                System.out.println("User " + username + " deleted successfully from the database.");
+                return true;
             } else {
-                System.out.println("Error: Unable to delete user from the database.");
+                System.out.println("Error: User " + username + " not found in the database.");
+                return false;
             }
+
         } catch (SQLException e) {
-            System.out.println("Error: Unable to delete user from database.");
+            System.err.println("Error deleting user from database:");
             e.printStackTrace();
+            JOptionPane.showMessageDialog(parentPanel, "Database Error: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
+    }
+
+    private void notifyUserDeleted(String username) {
+        // Example: You can add logic to notify other parts of the application here
+        System.out.println("User " + username + " deleted. Notify other components to refresh.");
+        // If you have observers or listeners, invoke them here
     }
 }

@@ -20,8 +20,8 @@ public class RegistrationChartPanel {
 
         // Header panel
         JPanel headerPanel = new JPanel(new BorderLayout());
-        JButton backButton = new JButton("Quay lại Dashboard");
-        JLabel headerLabel = new JLabel("Biểu đồ số lượng người đăng ký mới theo năm", SwingConstants.CENTER);
+        JButton backButton = new JButton("Return Dashboard");
+        JLabel headerLabel = new JLabel("Chart of Registration Yearly", SwingConstants.CENTER);
         headerLabel.setFont(new Font("Arial", Font.BOLD, 18));
 
         // Back button action listener
@@ -38,7 +38,7 @@ public class RegistrationChartPanel {
         headerPanel.add(headerLabel, BorderLayout.CENTER);
 
         // Select year button
-        JButton selectYearButton = new JButton("Chọn năm");
+        JButton selectYearButton = new JButton("Select year ");
         selectYearButton.addActionListener(e -> showYearSelectionDialog());
 
         // Add components to mainPanel
@@ -51,7 +51,7 @@ public class RegistrationChartPanel {
     }
 
     private void showYearSelectionDialog() {
-        String year = JOptionPane.showInputDialog("Nhập năm (ví dụ: 2024):");
+        String year = JOptionPane.showInputDialog("Select year (ex: 2024):");
 
         if (year != null && !year.trim().isEmpty()) {
             try {
@@ -59,7 +59,7 @@ public class RegistrationChartPanel {
                 Map<Integer, Integer> monthlyData = getMonthlyRegistrationData(selectedYear);
                 drawBarChart(selectedYear, monthlyData);
             } catch (NumberFormatException e) {
-                JOptionPane.showMessageDialog(null, "Vui lòng nhập năm hợp lệ!", "Lỗi", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Please enter correct year!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -115,7 +115,7 @@ public class RegistrationChartPanel {
         chartPanel.setPreferredSize(new Dimension(800, 600));
 
         JDialog chartDialog = new JDialog();
-        chartDialog.setTitle("Biểu đồ số lượng người đăng ký mới");
+        chartDialog.setTitle("Chart of Registration Yearly");
         chartDialog.setSize(800, 600);
         chartDialog.add(chartPanel);
         chartDialog.setLocationRelativeTo(null);

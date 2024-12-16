@@ -77,6 +77,19 @@ public class ChatGroupsPanel {
         JButton viewMembersButton = createSidebarButton("View Members", this::viewGroupMembers);
         JButton viewAdminsButton = createSidebarButton("View Admins", this::viewGroupAdmins);
 
+        JButton refreshButton = new JButton("Refresh");
+        refreshButton.addActionListener(e -> {
+            // Fetch new data and update table
+            List<Object[]> dataList = fetchChatGroupsData();
+            updateTableData(dataList);
+
+            // Clear any filters applied
+            TableRowSorter<?> sorter = (TableRowSorter<?>) chatGroupsTable.getRowSorter();
+            if (sorter != null) {
+                sorter.setRowFilter(null);
+            }
+        });
+
         // Add buttons to the sidebar
         sidebar.add(Box.createRigidArea(new Dimension(0, 10))); // Add spacing
         sidebar.add(sortByNameButton);
@@ -89,6 +102,8 @@ public class ChatGroupsPanel {
         sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
         sidebar.add(viewAdminsButton);
         sidebar.add(Box.createVerticalGlue());
+        sidebar.add(refreshButton);
+        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
 
         return sidebar;
     }
@@ -112,32 +127,33 @@ public class ChatGroupsPanel {
         String sql = "SELECT gr.groupname, creator.username, gr.createdat " +
                 "FROM groups gr " +
                 "JOIN users creator " +
-                "ON gr.createdby = creator.userid";
+                "ON gr.createdby = creator.username";
         List<Object[]> data = new ArrayList<>();
 
-        // Fetch the connection from the DBConnection class
-        try (Connection conn = DBConnection.getConnection()) {
-            if (conn == null || conn.isClosed()) {
-                System.out.println("Database connection is not established or has been closed.");
-                JOptionPane.showMessageDialog(mainPanel, "Failed to connect to the database.", "Error", JOptionPane.ERROR_MESSAGE);
-                return data;
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String groupName = rs.getString("groupname");
+                String creator = rs.getString("username");
+                Timestamp createdAt = rs.getTimestamp("createdat");
+                data.add(new Object[]{groupName, creator, createdAt});
             }
 
-            try (PreparedStatement stmt = conn.prepareStatement(sql);
-                 ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    String groupName = rs.getString("groupname");
-                    String creator = rs.getString("username");
-                    Timestamp createdAt = rs.getTimestamp("createdat");
-                    data.add(new Object[]{groupName, creator, createdAt});
-                }
-            }
         } catch (SQLException e) {
-            e.printStackTrace();
             JOptionPane.showMessageDialog(mainPanel, "Error fetching data from the database.", "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
 
         return data;
+    }
+
+    private void updateTableData(List<Object[]> data) {
+        tableModel.setRowCount(0); // Clear existing data
+        for (Object[] row : data) {
+            tableModel.addRow(row); // Add new rows
+        }
     }
 
     private void sortByName() {
@@ -168,7 +184,6 @@ public class ChatGroupsPanel {
         }
 
         String groupName = (String) chatGroupsTable.getValueAt(selectedRow, 0);
-        System.out.println("Selected group for members: " + groupName);  // Debugging log
 
         List<String[]> members = fetchGroupMembers(groupName);
         if (members.isEmpty()) {
@@ -186,7 +201,6 @@ public class ChatGroupsPanel {
         }
 
         String groupName = (String) chatGroupsTable.getValueAt(selectedRow, 0);
-        System.out.println("Selected group for admins: " + groupName);  // Debugging log
 
         List<String[]> admins = fetchGroupAdmins(groupName);
         if (admins.isEmpty()) {
@@ -199,10 +213,11 @@ public class ChatGroupsPanel {
     private List<String[]> fetchGroupMembers(String groupName) {
         List<String[]> members = new ArrayList<>();
         String query = "SELECT u.username, u.fullname " +
-                "FROM groupmembers gm " +
-                "JOIN users u ON u.userid = gm.userid " +
-                "JOIN groups g ON gm.groupid = g.groupid " +
+                "FROM GroupParticipants gp " +
+                "JOIN users u ON gp.username = u.username AND gp.role = 'Member' " +
+                "JOIN groups g ON gp.groupid = g.groupid " +
                 "WHERE g.groupname = ?";
+
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, groupName);
@@ -223,10 +238,12 @@ public class ChatGroupsPanel {
 
     private List<String[]> fetchGroupAdmins(String groupName) {
         List<String[]> admins = new ArrayList<>();
-        String query = "SELECT u.username, u.fullname FROM groupadmins ga " +
-                "JOIN users u ON ga.adminid = u.userid " +
-                "JOIN groups g ON ga.groupid = g.groupid " +
+        String query = "SELECT u.username, u.fullname " +
+                "FROM GroupParticipants gp " +
+                "JOIN users u ON gp.username = u.username AND gp.role = 'Admin' " +
+                "JOIN groups g ON gp.groupid = g.groupid " +
                 "WHERE g.groupname = ?";
+
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
             stmt.setString(1, groupName);

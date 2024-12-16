@@ -28,6 +28,10 @@ public class LoginHistoryPanel {
         JScrollPane scrollPane = new JScrollPane(table);
         panel.add(scrollPane, BorderLayout.CENTER);
 
+        JButton refreshButton = new JButton("Refresh"); // New Refresh Button
+        panel.add(refreshButton, BorderLayout.NORTH);
+        refreshButton.addActionListener(e -> fetchLoginHistoryData());
+
         // Back button to return to the Dashboard
         JButton backButton = new JButton("Return Dashboard");
         backButton.addActionListener(e -> switchToPanel(mainPanel, "Dashboard"));
@@ -37,7 +41,7 @@ public class LoginHistoryPanel {
     private Object[][] fetchLoginHistoryData() {
         String query = "SELECT u.username, u.fullname, lh.logintime " +
                 "FROM loginhistory lh " +
-                "JOIN users u ON lh.userid = u.userid " +
+                "JOIN users u ON lh.username = u.username " +
                 "ORDER BY lh.logintime DESC";
         Object[][] data = new Object[0][0];
 

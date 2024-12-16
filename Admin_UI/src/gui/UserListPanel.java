@@ -16,52 +16,41 @@ public class UserListPanel {
     private DefaultTableModel tableModel;
 
     public UserListPanel(JPanel mainContainer) {
-        // Set up the main panel with a BorderLayout
         mainPanel = new JPanel(new BorderLayout());
 
-        // Create the header panel
+        // Create header and sidebar panels
         JPanel headerPanel = createHeaderPanel(mainContainer);
+        JPanel sidebarPanel = createSidebarPanel(mainContainer);
 
-        // Create sidebar panel
-        JPanel sidebar = createSidebarPanel(mainContainer);
+        // Set up table columns
+        String[] columnNames = {"Username", "Full Name", "Address", "Date of Birth", "Gender", "Email", "Password", "Status"};
+        tableModel = new DefaultTableModel(columnNames, 0);
 
-        // Create column names for the table
-        String[] columnNames = {"Username", "Full name", "Address", "Date of birth", "Gender", "Email", "Password", "Status"};
-
-        // Fetch data from the database
-        List<Object[]> data = fetchDataFromDatabase();
-
-        // Create the table model with fetched data
-        tableModel = new DefaultTableModel(data.toArray(new Object[0][]), columnNames);
-
-        // Create the table and set the model
+        // Create and configure the user table
         userTable = new JTable(tableModel);
-
-        // Enable sorting
         TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
         userTable.setRowSorter(sorter);
 
-        // Add the table to a scroll pane
-        JScrollPane scrollPane = new JScrollPane(userTable);
+        // Fetch initial data for the table
+        fetchDataFromDatabase();
 
         // Add components to the main panel
+        JScrollPane scrollPane = new JScrollPane(userTable);
         mainPanel.add(headerPanel, BorderLayout.NORTH);
-        mainPanel.add(sidebar, BorderLayout.WEST); // Sidebar on the left
-        mainPanel.add(scrollPane, BorderLayout.CENTER); // Table in the center
+        mainPanel.add(sidebarPanel, BorderLayout.WEST);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
     }
 
     private JPanel createHeaderPanel(JPanel mainContainer) {
         JPanel headerPanel = new JPanel(new BorderLayout());
-        JButton backButton = new JButton("Return Dashboard");
-        JLabel headerLabel = new JLabel("Manage account", SwingConstants.CENTER);
-        headerLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        JButton backButton = new JButton("Return to Dashboard");
+        JLabel titleLabel = new JLabel("Manage Accounts", SwingConstants.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
 
-        // Add action listener to the back button
         backButton.addActionListener(e -> switchToDashboard(mainContainer));
 
         headerPanel.add(backButton, BorderLayout.WEST);
-        headerPanel.add(headerLabel, BorderLayout.CENTER);
-
+        headerPanel.add(titleLabel, BorderLayout.CENTER);
         return headerPanel;
     }
 
@@ -70,72 +59,67 @@ public class UserListPanel {
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(Color.LIGHT_GRAY);
 
-        // Create buttons
-        JButton addButton = createSidebarButton("Add account", () -> new AddUserDialog(mainPanel, tableModel));
-        JButton editButton = createSidebarButton("Edit account", () -> new EditUserHandler(mainPanel, userTable, tableModel).execute());
-        JButton lockButton = createSidebarButton("Lock/Unlock account", () -> new LockUnlockHandler(mainPanel, userTable, tableModel).execute());
-        JButton deleteButton = createSidebarButton("Delete account", () -> new DeleteUserHandler(mainPanel, userTable, tableModel).execute());
-        JButton updatePasswordButton = createSidebarButton("Update password", () -> new UpdatePasswordDialog(mainPanel, userTable).execute());
-        JButton viewHistoryButton = createSidebarButton("Login history", () -> new ViewHistoryDialog(mainPanel, userTable).execute());
-        JButton friendListButton = createSidebarButton("Friends list", () -> new FriendListDialog(mainPanel, userTable).execute());
+        // Create buttons for sidebar
+        sidebar.add(createSidebarButton("Add Account", () -> new AddUserDialog(mainPanel, tableModel)));
+        sidebar.add(createSidebarButton("Edit Account", () -> new EditUserHandler(mainPanel, userTable, tableModel).execute()));
+        sidebar.add(createSidebarButton("Lock/Unlock Account", () -> new LockUnlockHandler(mainPanel, userTable, tableModel).execute()));
+        sidebar.add(createSidebarButton("Delete Account", () -> new DeleteUserHandler(mainPanel, userTable, tableModel).execute()));
+        sidebar.add(createSidebarButton("Update Password", () -> new UpdatePasswordDialog(mainPanel, userTable, tableModel).execute()));
+        sidebar.add(createSidebarButton("View Login History", () -> new ViewHistoryDialog(mainPanel, userTable).execute()));
+        sidebar.add(createSidebarButton("Friends List", () -> new FriendListDialog(mainPanel, userTable).execute()));
+        sidebar.add(createSidebarButton("Reset Password", () -> new ResetPasswordHandler(mainPanel, userTable, tableModel).execute()));
 
-        // Add buttons to the sidebar
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(addButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(editButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(lockButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(deleteButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(updatePasswordButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(viewHistoryButton);
-        sidebar.add(Box.createRigidArea(new Dimension(0, 10)));
-        sidebar.add(friendListButton);
         sidebar.add(Box.createVerticalGlue());
 
+        JButton refreshButton = new JButton("Refresh");
+        refreshButton.addActionListener(e -> fetchDataFromDatabase());
+        sidebar.add(refreshButton);
         return sidebar;
     }
 
-    private JButton createSidebarButton(String text, Runnable action) {
-        JButton button = new JButton(text);
+    private JButton createSidebarButton(String label, Runnable action) {
+        JButton button = new JButton(label);
+        button.setAlignmentX(Component.LEFT_ALIGNMENT);
         button.addActionListener(e -> action.run());
         return button;
     }
 
     private void switchToDashboard(JPanel mainContainer) {
-        CardLayout cl = (CardLayout) mainContainer.getLayout();
-        cl.show(mainContainer, "Dashboard");
+        CardLayout layout = (CardLayout) mainContainer.getLayout();
+        layout.show(mainContainer, "Dashboard");
+    }
+
+    private void fetchDataFromDatabase() {
+        String query = "SELECT username, fullname, address, dateofbirth, gender, email, password, status FROM users";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
+
+            // Clear existing data in the table model
+            tableModel.setRowCount(0);
+
+            // Populate the table model with data from the database
+            while (rs.next()) {
+                Object[] row = {
+                        rs.getString("username"),
+                        rs.getString("fullname"),
+                        rs.getString("address"),
+                        rs.getString("dateofbirth"),
+                        rs.getString("gender"),
+                        rs.getString("email"),
+                        rs.getString("password"),
+                        rs.getString("status")
+                };
+                tableModel.addRow(row);
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(mainPanel, "Failed to fetch data from the database.", "Database Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
     }
 
     public JPanel getMainPanel() {
         return mainPanel;
-    }
-
-    private List<Object[]> fetchDataFromDatabase() {
-        List<Object[]> data = new ArrayList<>();
-        Connection conn = DBConnection.getConnection();
-
-        String sql = "SELECT username, fullname, address, dateofbirth, gender, email, password, status FROM users";  // Adjust query as per your schema
-        try (PreparedStatement stmt = conn.prepareStatement(sql); 
-        ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                String username = rs.getString("username");
-                String fullname = rs.getString("fullname");
-                String address = rs.getString("address");
-                String dob = rs.getString("dateofbirth");
-                String gender = rs.getString("gender");
-                String email = rs.getString("email");
-                String password = rs.getString("password");
-                String status = rs.getString("status");
-                data.add(new Object[]{username, fullname, address, dob, gender, email, password, status});
-            }
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(mainPanel, "Cannot access data from database (User List)", "Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-        return data;
     }
 }

@@ -3,6 +3,7 @@ package gui;
 import utils.DBConnection;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -10,83 +11,108 @@ import java.sql.SQLException;
 public class UpdatePasswordDialog {
     private final JPanel parentPanel;
     private final JTable userTable;
+    private final DefaultTableModel tableModel;
 
-    public UpdatePasswordDialog(JPanel parentPanel, JTable userTable) {
+    public UpdatePasswordDialog(JPanel parentPanel, JTable userTable, DefaultTableModel tableModel) {
         this.parentPanel = parentPanel;
         this.userTable = userTable;
+        this.tableModel = tableModel;
     }
 
     public void execute() {
         int selectedRow = userTable.getSelectedRow();
 
         if (selectedRow == -1) {
-            JOptionPane.showMessageDialog(parentPanel, "Select an account!", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(parentPanel, "Please select an account!", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        String username = (String) userTable.getValueAt(selectedRow, 0);
+        // Convert view index to model index
+        selectedRow = userTable.convertRowIndexToModel(selectedRow);
 
-        // Create a dialog to update password
-        JDialog dialog = new JDialog((JFrame) SwingUtilities.getWindowAncestor(parentPanel), "Update password", true);
-        dialog.setLayout(new BoxLayout(dialog.getContentPane(), BoxLayout.Y_AXIS));
+        // Get current username and password
+        String username = (String) tableModel.getValueAt(selectedRow, 0);
+        String currentPassword = (String) tableModel.getValueAt(selectedRow, 6);
+
+        // Prompt user for the new password
+        String newPassword = showPasswordInputDialog(username);
+
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            // Update the password in the table
+            tableModel.setValueAt(newPassword, selectedRow, 6);
+
+            // Update the password in the database
+            if (updatePasswordInDatabase(username, newPassword)) {
+                JOptionPane.showMessageDialog(parentPanel, "Password updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(parentPanel, "Failed to update the password!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    private String showPasswordInputDialog(String username) {
+        JPanel dialogPanel = new JPanel();
+        dialogPanel.setLayout(new BoxLayout(dialogPanel, BoxLayout.Y_AXIS));
 
         JLabel infoLabel = new JLabel("Update password for user: " + username);
         JPasswordField newPasswordField = new JPasswordField();
         JPasswordField confirmPasswordField = new JPasswordField();
 
-        JButton updateButton = new JButton("Update");
-        JButton cancelButton = new JButton("Cancel");
+        dialogPanel.add(infoLabel);
+        dialogPanel.add(new JLabel("New Password:"));
+        dialogPanel.add(newPasswordField);
+        dialogPanel.add(new JLabel("Confirm Password:"));
+        dialogPanel.add(confirmPasswordField);
 
-        dialog.add(infoLabel);
-        dialog.add(new JLabel("New password:"));
-        dialog.add(newPasswordField);
-        dialog.add(new JLabel("Confirm password:"));
-        dialog.add(confirmPasswordField);
-        dialog.add(updateButton);
-        dialog.add(cancelButton);
+        int result = JOptionPane.showConfirmDialog(parentPanel, dialogPanel, "Update Password", JOptionPane.OK_CANCEL_OPTION);
 
-        dialog.setSize(300, 200);
-        dialog.setLocationRelativeTo(parentPanel);
-        dialog.setVisible(true);
-
-        // Handle update button click
-        updateButton.addActionListener(e -> {
+        if (result == JOptionPane.OK_OPTION) {
             String newPassword = new String(newPasswordField.getPassword());
             String confirmPassword = new String(confirmPasswordField.getPassword());
 
             if (newPassword.isEmpty() || confirmPassword.isEmpty()) {
-                JOptionPane.showMessageDialog(dialog, "Please enter full password!", "Error", JOptionPane.ERROR_MESSAGE);
-            } else if (!newPassword.equals(confirmPassword)) {
-                JOptionPane.showMessageDialog(dialog, "Wrong password!", "Error", JOptionPane.ERROR_MESSAGE);
-            } else {
-                // Update password in the database
-                updatePasswordInDatabase(username, newPassword);
-                JOptionPane.showMessageDialog(dialog, "Update password successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-                dialog.dispose();
+                JOptionPane.showMessageDialog(parentPanel, "Both fields are required!", "Error", JOptionPane.ERROR_MESSAGE);
+                return null;
             }
-        });
 
-        // Handle cancel button click
-        cancelButton.addActionListener(e -> dialog.dispose());
+            if (!newPassword.equals(confirmPassword)) {
+                JOptionPane.showMessageDialog(parentPanel, "Passwords do not match!", "Error", JOptionPane.ERROR_MESSAGE);
+                return null;
+            }
+
+            return newPassword;
+        }
+
+        return null;
     }
 
-    private void updatePasswordInDatabase(String username, String newPassword) {
+    private boolean updatePasswordInDatabase(String username, String newPassword) {
         Connection conn = DBConnection.getConnection();
-        String sql = "UPDATE users SET password = ? WHERE username = ?";  // Assuming a 'password' column exists in your table
+
+        if (conn == null) {
+            JOptionPane.showMessageDialog(parentPanel, "Database connection error!", "Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, newPassword);
+            stmt.setString(1, newPassword); // Use hashing if needed
             stmt.setString(2, username);
 
             int rowsAffected = stmt.executeUpdate();
+
             if (rowsAffected > 0) {
                 System.out.println("Password updated successfully for user: " + username);
+                return true;
             } else {
-                System.out.println("Error: Unable to update password for user: " + username);
+                System.out.println("Failed to update password for user: " + username);
+                return false;
             }
         } catch (SQLException e) {
-            System.out.println("Error: Unable to update password in database.");
+            System.out.println("Error updating password in the database: " + e.getMessage());
             e.printStackTrace();
+            return false;
         }
     }
 }
