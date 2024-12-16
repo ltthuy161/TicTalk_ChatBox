@@ -1,11 +1,14 @@
 package presentation;
 
+import dto.GroupChatMessage;
 import dto.ChatMessage;
 import dto.User;
 import dto.FriendRequest;
+import dto.Group;
+import java.util.Set;
+import java.util.HashSet;
 import bus.UserBUS;
 import javax.swing.*;
-import javax.swing.border.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -18,6 +21,7 @@ import java.text.ParseException;
 import java.util.Date;
 import java.io.*;
 import java.net.*;
+import java.sql.Timestamp;
 
 public class ChatApp implements Runnable{
     private static final int CARD_HEIGHT = 60;
@@ -80,17 +84,17 @@ public class ChatApp implements Runnable{
         sidebar.setLayout(new BoxLayout(sidebar, BoxLayout.Y_AXIS));
         sidebar.setBackground(new Color(30, 30, 30)); // Dark background color
 
-        JLabel titleLabel = new JLabel("ChatApp");
+        JLabel titleLabel = new JLabel(loggedInUser.getUsername());
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         titleLabel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
 
+        JButton chatHistoryButton = createSidebarButton("Chat");
         JButton editProfileButton = createSidebarButton("Edit Profile");
         JButton searchButton = createSidebarButton("Search");
         JButton friendsButton = createSidebarButton("Friends");
         JButton friendRequestButton = createSidebarButton("Friend Request");
-        JButton chatHistoryButton = createSidebarButton("Chat History");
         JButton createGroupChatButton = createSidebarButton("Create Group Chat");
 
         // Add action listener to Friends button
@@ -98,14 +102,15 @@ public class ChatApp implements Runnable{
         searchButton.addActionListener(e -> openSearchScreen(frame));
         friendsButton.addActionListener(e -> openFriendListScreen(frame, getCurrentUser()));
         friendRequestButton.addActionListener(e -> openFriendRequestScreen(frame));
-        chatHistoryButton.addActionListener(e -> openChatHistoryScreen(frame));
+        chatHistoryButton.addActionListener(e -> openChattingScreen(frame));
+        createGroupChatButton.addActionListener(e -> openCreateGroupChatScreen(frame));
 
         sidebar.add(titleLabel);
+        sidebar.add(chatHistoryButton);
         sidebar.add(editProfileButton);
         sidebar.add(searchButton);
         sidebar.add(friendsButton);
         sidebar.add(friendRequestButton);
-        sidebar.add(chatHistoryButton);
         sidebar.add(createGroupChatButton);
         sidebar.add(Box.createVerticalGlue());
 
@@ -125,16 +130,14 @@ public class ChatApp implements Runnable{
     }
 
     private static void openSearchScreen(JFrame frame) {
-        // Create the content panel for the search results
-        JPanel resultPanel = new JPanel();
-        resultPanel.setLayout(new BorderLayout());
-        resultPanel.setBackground(Color.WHITE);
+        // Main content panel
+        JPanel contentPanel = new JPanel(new BorderLayout());
 
         // Add title label
-        JLabel titleLabel = new JLabel("Search Results");
+        JLabel titleLabel = new JLabel("Search");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
-        resultPanel.add(titleLabel, BorderLayout.NORTH);
+        contentPanel.add(titleLabel, BorderLayout.NORTH);
 
         // Search bar panel
         JPanel searchPanel = new JPanel(new BorderLayout());
@@ -147,19 +150,59 @@ public class ChatApp implements Runnable{
         searchPanel.add(searchField, BorderLayout.CENTER);
         searchPanel.add(searchButton, BorderLayout.EAST);
 
-        // Filter panel (Not implemented yet, can be added later)
+        // Filter panel
         JPanel filterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         filterPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 
-        // Result list panel
-        JPanel resPanel = new JPanel();
-        resPanel.setLayout(new BoxLayout(resPanel, BoxLayout.Y_AXIS));
+        JLabel filterLabel = new JLabel("Filter:");
+        JComboBox<String> filterComboBox = new JComboBox<>(new String[]{"People", "Message"});
+        filterComboBox.setFont(new Font("Arial", Font.PLAIN, 14));
 
-        // Wrap the results panel in a scrollable view
-        JScrollPane scrollPane = new JScrollPane(resPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border
+        filterPanel.add(filterLabel);
+        filterPanel.add(filterComboBox);
+
+        // Results panel
+        JPanel resultsPanel = new JPanel();
+        resultsPanel.setLayout(new BoxLayout(resultsPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(resultsPanel);
+
+        // Search button action listener
+        searchButton.addActionListener(e -> {
+            String searchText = searchField.getText().trim();
+            String selectedFilter = (String) filterComboBox.getSelectedItem();
+
+            if (!searchText.isEmpty()) {
+                if ("People".equals(selectedFilter)) {
+                    searchPeople(resultsPanel, searchText, getCurrentUser().getUsername());
+                } else { // "Message"
+                    searchAllMessages(resultsPanel, searchText, getCurrentUser().getUsername());
+                }
+            } else {
+                resultsPanel.removeAll();
+                resultsPanel.revalidate();
+                resultsPanel.repaint();
+            }
+        });
+
+        // Add action listener to filterComboBox
+        filterComboBox.addActionListener(e -> {
+            String searchText = searchField.getText().trim();
+            String selectedFilter = (String) filterComboBox.getSelectedItem();
+
+            // Only perform search if there is text in the search field
+            if (!searchText.isEmpty()) {
+                if ("People".equals(selectedFilter)) {
+                    searchPeople(resultsPanel, searchText, getCurrentUser().getUsername());
+                } else { // "Message"
+                    searchAllMessages(resultsPanel, searchText, getCurrentUser().getUsername());
+                }
+            } else {
+                // Clear the results panel if the search field is empty
+                resultsPanel.removeAll();
+                resultsPanel.revalidate();
+                resultsPanel.repaint();
+            }
+        });
 
         // Combine the search bar and filter bar into a fixed top panel
         JPanel topPanel = new JPanel();
@@ -167,50 +210,70 @@ public class ChatApp implements Runnable{
         topPanel.add(searchPanel, BorderLayout.NORTH);
         topPanel.add(filterPanel, BorderLayout.SOUTH);
 
-        // Add components to the result panel, below the title label
+        // Add components to the friend list panel below the title
         JPanel contentWrapper = new JPanel(new BorderLayout());
         contentWrapper.add(topPanel, BorderLayout.NORTH); // Fixed header (search + filter)
-        contentWrapper.add(scrollPane, BorderLayout.CENTER); // Scrollable result list
-        resultPanel.add(contentWrapper, BorderLayout.CENTER);
+        contentWrapper.add(scrollPane, BorderLayout.CENTER); // Scrollable friend list
+        contentPanel.add(contentWrapper, BorderLayout.CENTER);
 
         // Replace the current content panel
         frame.getContentPane().removeAll();
         frame.add(createSidebar(frame), BorderLayout.WEST);
-        frame.add(resultPanel, BorderLayout.CENTER);
+        frame.add(contentPanel, BorderLayout.CENTER);
         frame.revalidate();
         frame.repaint();
+    }
 
-        // Add action listener to the search button
-        searchButton.addActionListener(e -> {
-            String searchText = searchField.getText().trim().toLowerCase();
-            User currentUser = getCurrentUser();
+    private static void searchPeople(JPanel resultsPanel, String searchText, String currentUsername) {
+        // Clear the current results
+        resultsPanel.removeAll();
 
-            // Clear the current results
-            resPanel.removeAll();
+        // Search for users
+        UserBUS userBUS = new UserBUS();
+        List<User> searchResults = userBUS.searchUsersByUsername(currentUsername, searchText);
 
-            // Search for users
-            UserBUS userBUS = new UserBUS();
-            List<User> searchResults = userBUS.searchUsersByUsername(currentUser.getUsername(), searchText);
-
-            if (searchResults != null && !searchResults.isEmpty()) {
-                for (User resultUser : searchResults) {
-                    if (currentUser.getUsername() != resultUser.getUsername()) {
-                        boolean isFriend = userBUS.isFriend(currentUser.getUsername(), resultUser.getUsername());
-                        JPanel resultCard = createResultCard(resultUser.getUsername(), isFriend);
-                        resPanel.add(resultCard);
-                    }
+        if (searchResults != null && !searchResults.isEmpty()) {
+            for (User resultUser : searchResults) {
+                if (currentUsername != resultUser.getUsername()) {
+                    boolean isFriend = userBUS.isFriend(currentUsername, resultUser.getUsername());
+                    JPanel resultCard = createResultCard(resultUser.getUsername(), isFriend);
+                    resultsPanel.add(resultCard);
                 }
-            } else {
-                JLabel noResultsLabel = new JLabel("No users found matching the criteria.");
-                noResultsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-                resPanel.add(noResultsLabel);
             }
+        } else {
+            JLabel noResultsLabel = new JLabel("No users found matching the criteria.");
+            noResultsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            resultsPanel.add(noResultsLabel);
+        }
 
-            // Update the UI
-            resPanel.revalidate();
-            resPanel.repaint();
-        });
+        // Update the UI
+        resultsPanel.revalidate();
+        resultsPanel.repaint();
+    }
 
+    private static void searchAllMessages(JPanel resultsPanel, String searchText, String currentUsername) {
+        resultsPanel.removeAll();
+
+        UserBUS userBUS = new UserBUS();
+        List<ChatMessage> searchResults = userBUS.searchAllMessages(searchText, currentUsername);
+
+        if (searchResults.isEmpty()) {
+            resultsPanel.add(new JLabel("No messages found."));
+        } else {
+            for (ChatMessage message : searchResults) {
+                // Display only messages where the current user is the sender or receiver
+                if (message.getSender().equals(currentUsername) || message.getReceiver().equals(currentUsername)) {
+                    // Get the current timestamp in the desired format
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    String timestamp = dateFormat.format(message.getTimestamp());
+                    JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+                    resultsPanel.add(messageCard);
+                }
+            }
+        }
+
+        resultsPanel.revalidate();
+        resultsPanel.repaint();
     }
 
     private static void openEditProfileScreen(JFrame frame) {
@@ -417,25 +480,6 @@ public class ChatApp implements Runnable{
             updateFriendListPanel(friendsPanel, filteredFriends);
         });
 
-        // Add friends to the panel
-        if (friends != null && !friends.isEmpty()) {
-            Collections.sort(friends, new Comparator<User>() {
-                @Override
-                public int compare(User user1, User user2) {
-                    return user1.getUsername().compareToIgnoreCase(user2.getUsername());
-                }
-            });
-
-            for (User friend : friends) {
-                friendsPanel.add(createFriendCard(friend.getUsername())); // Use friend's username
-            }
-        } else {
-            // Handle the case where the user has no friends
-            JLabel noFriendsLabel = new JLabel("No friends found.");
-            noFriendsLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            friendsPanel.add(noFriendsLabel);
-        }
-
         // Wrap the friends panel in a scrollable view
         JScrollPane scrollPane = new JScrollPane(friendsPanel);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
@@ -560,84 +604,18 @@ public class ChatApp implements Runnable{
         frame.repaint();
     }
 
-    private static void openChatHistoryScreen(JFrame frame) {
-        // Create the chat history panel
-        JPanel chatHistoryPanel = new JPanel();
-        chatHistoryPanel.setLayout(new BorderLayout());
-        chatHistoryPanel.setBackground(Color.WHITE);
-
-        // Title label
-        JLabel titleLabel = new JLabel("Chat History");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Chat history list
-        JPanel chatListPanel = new JPanel();
-        chatListPanel.setLayout(new BoxLayout(chatListPanel, BoxLayout.Y_AXIS));
-
-        // Add dummy conversations
-        for (int i = 1; i <= 20; i++) {
-            chatListPanel.add(createChatCard("Conversation " + i, frame));
-        }
-
-        // Wrap the list in a scroll pane
-        JScrollPane scrollPane = new JScrollPane(chatListPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-
-        chatHistoryPanel.add(titleLabel, BorderLayout.NORTH);
-        chatHistoryPanel.add(scrollPane, BorderLayout.CENTER);
-
-        // Replace the current content panel
-        frame.getContentPane().removeAll();
-        frame.add(createSidebar(frame), BorderLayout.WEST);
-        frame.add(chatHistoryPanel, BorderLayout.CENTER);
-        frame.revalidate();
-        frame.repaint();
-    }
-
-    private static void openConversationDetailScreen(JFrame frame, String conversationName) {
-        // Create the conversation detail panel
-        JPanel detailPanel = new JPanel();
-        detailPanel.setLayout(new BorderLayout());
-        detailPanel.setBackground(Color.WHITE);
-
-        // Title label
-        JLabel titleLabel = new JLabel("Conversation Detail: " + conversationName);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Conversation detail area
-        JPanel messagePanel = new JPanel();
-        messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.Y_AXIS));
-
-        // Add dummy messages
-        for (int i = 1; i <= 4; i++) {
-            messagePanel.add(createMessageCard("User" + i, "This is message " + i, "10:0" + i + " AM"));
-        }
-
-        // Wrap messages in a scroll pane
-        JScrollPane scrollPane = new JScrollPane(messagePanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-
-        // Back button
-        JButton backButton = new JButton("Back");
-        backButton.addActionListener(e -> openChatHistoryScreen(frame));
-
-        detailPanel.add(titleLabel, BorderLayout.NORTH);
-        detailPanel.add(scrollPane, BorderLayout.CENTER);
-        detailPanel.add(backButton, BorderLayout.SOUTH);
-
-        // Replace the current content panel
-        frame.getContentPane().removeAll();
-        frame.add(createSidebar(frame), BorderLayout.WEST);
-        frame.add(detailPanel, BorderLayout.CENTER);
-        frame.revalidate();
-        frame.repaint();
-    }
-
     private static void openChatScreen(JFrame frame, User currentUser, String otherUsername) {
         // Main content panel
         JPanel contentPanel = new JPanel(new BorderLayout());
+
+        // Panel for the title label and report button
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        // Title label displaying the other user's username
+        JLabel titleLabel = new JLabel(otherUsername);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 0)); // Add some padding
+        topPanel.add(titleLabel, BorderLayout.WEST);
 
         // Search bar panel
         JPanel searchPanel = new JPanel(new BorderLayout());
@@ -646,7 +624,10 @@ public class ChatApp implements Runnable{
         JButton searchButton = new JButton("Search");
         searchPanel.add(searchField, BorderLayout.CENTER);
         searchPanel.add(searchButton, BorderLayout.EAST);
-        contentPanel.add(searchPanel, BorderLayout.NORTH); // Add search panel to the top
+        topPanel.add(searchPanel, BorderLayout.SOUTH); // Add search panel to the top
+
+        // Add the top panel to the content panel
+        contentPanel.add(topPanel, BorderLayout.NORTH);
 
         // Panel for displaying messages
         JPanel chatPanel = new JPanel();
@@ -667,7 +648,11 @@ public class ChatApp implements Runnable{
         UserBUS userBUS = new UserBUS();
         List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
         for (ChatMessage message : previousMessages) {
-            displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+            // Get the current timestamp in the desired format
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            String timestamp = dateFormat.format(message.getTimestamp());
+            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+            chatPanel.add(messageCard);
         }
 
         // Action listener for the Send button
@@ -691,19 +676,83 @@ public class ChatApp implements Runnable{
         searchButton.addActionListener(e -> {
             String searchText = searchField.getText().trim();
             if (!searchText.isEmpty()) {
-                searchMessages(chatPanel, previousMessages, searchText, currentUser, otherUsername);
+                searchMessages(chatPanel, searchText, currentUser, otherUsername);
             } else {
                 // If search text is empty, redisplay all messages
                 chatPanel.removeAll();
-                for (ChatMessage message : previousMessages) {
-                    displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
-                }
                 chatPanel.revalidate();
                 chatPanel.repaint();
             }
         });
 
-        // Replace the current content panel
+        // Menu button
+        JButton menuButton = new JButton("☰"); // Using a "hamburger" icon
+        menuButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        topPanel.add(menuButton, BorderLayout.EAST);
+
+        // Create the popup menu
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        // Spam Report menu item
+        JMenuItem spamReportMenuItem = new JMenuItem("Spam Report");
+        spamReportMenuItem.setForeground(Color.RED);
+        spamReportMenuItem.addActionListener(e -> {
+            // Handle spam report logic
+            String reporter = currentUser.getUsername();
+            String reported = otherUsername;
+
+            // Prompt for the message to report (or let them choose from recent messages)
+            String messageToReport = JOptionPane.showInputDialog(frame, "Enter the message to report (or leave empty to report the user):");
+
+            boolean success = userBUS.createSpamReport(reporter, reported, messageToReport);
+
+            if (success) {
+                JOptionPane.showMessageDialog(frame, "User " + otherUsername + " reported for spam.");
+            } else {
+                JOptionPane.showMessageDialog(frame, "Error reporting user.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Spam Report menu item
+        JMenuItem removeMessageMenuItem = new JMenuItem("Remove Message");
+        removeMessageMenuItem.setForeground(Color.RED);
+        removeMessageMenuItem.addActionListener(e -> openRemoveMessageScreen(frame, currentUser, otherUsername));
+
+        // Clear Chat History menu item
+        JMenuItem clearChatMenuItem = new JMenuItem("Clear Chat History");
+        clearChatMenuItem.setForeground(Color.RED);
+        clearChatMenuItem.addActionListener(e -> {
+            int response = JOptionPane.showConfirmDialog(frame,
+                    "Are you sure you want to clear the chat history with " + otherUsername + "? This action cannot be undone.",
+                    "Confirm Clear Chat History",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (response == JOptionPane.YES_OPTION) {
+                boolean success = userBUS.clearChatHistory(currentUser.getUsername(), otherUsername);
+
+                if (success) {
+                    JOptionPane.showMessageDialog(frame, "Chat history cleared successfully.");
+                    // Refresh the chat panel to show the empty chat
+                    chatPanel.removeAll();
+                    chatPanel.revalidate();
+                    chatPanel.repaint();
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Error clearing chat history.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        // Add menu items to the popup menu
+        popupMenu.add(spamReportMenuItem);
+        popupMenu.add(removeMessageMenuItem);
+        popupMenu.add(clearChatMenuItem);
+
+        // Add action listener to the menu button
+        menuButton.addActionListener(e -> {
+            popupMenu.show(menuButton, 0, menuButton.getHeight());
+        });
+
         frame.getContentPane().removeAll();
         frame.add(createSidebar(frame), BorderLayout.WEST);
         frame.add(contentPanel, BorderLayout.CENTER);
@@ -711,30 +760,126 @@ public class ChatApp implements Runnable{
         frame.repaint();
     }
 
-    private static void searchMessages(JPanel chatPanel, List<ChatMessage> messages, String searchText, User currentUser, String otherUsername) {
-        chatPanel.removeAll(); // Clear current messages
+    private static void openRemoveMessageScreen(JFrame frame, User currentUser, String otherUsername) {
+        // Main content panel
+        JPanel contentPanel = new JPanel(new BorderLayout());
 
-        for (ChatMessage message : messages) {
-            // Check if the message text contains the search text (case-insensitive)
-            if (message.getMessage().toLowerCase().contains(searchText.toLowerCase())) {
-                displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+        // Panel for the title label
+        JPanel topPanel = new JPanel(new BorderLayout());
+
+        // Title label
+        JLabel titleLabel = new JLabel("Remove Message");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 0));
+        topPanel.add(titleLabel, BorderLayout.WEST);
+
+        // Add the top panel to the content panel
+        contentPanel.add(topPanel, BorderLayout.NORTH);
+
+        // Panel for displaying messages
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(chatPanel);
+        contentPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // Load and display previous messages
+        UserBUS userBUS = new UserBUS();
+        List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
+        for (ChatMessage message : previousMessages) {
+            // Use the createRemoveMessageCard function from the previous response
+            JPanel messageCard = createRemoveMessageCard(message, message.getTimestamp(), chatPanel);
+            chatPanel.add(messageCard);
+        }
+
+        // Update the frame
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(contentPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+    private static JPanel createRemoveMessageCard(ChatMessage message, Timestamp timestamp, JPanel chatPanel) {
+        JPanel card = new JPanel();
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.setBackground(new Color(230, 230, 230));
+        card.setPreferredSize(new Dimension(card.getPreferredSize().width, CARD_HEIGHT));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel usernameLabel = new JLabel(message.getSender());
+        usernameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+
+        // Use the Timestamp directly, format when displaying if needed.
+        JLabel timestampLabel = new JLabel(timestamp.toString());
+        timestampLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+        timestampLabel.setForeground(Color.GRAY);
+
+        JLabel messageLabel = new JLabel(message.getMessage());
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BorderLayout());
+        textPanel.add(usernameLabel, BorderLayout.NORTH);
+        textPanel.add(messageLabel, BorderLayout.CENTER);
+
+        card.add(textPanel, BorderLayout.CENTER);
+        card.add(timestampLabel, BorderLayout.EAST); // Place timestamp on the WEST side
+
+        JButton removeButton = new JButton("Remove");
+        removeButton.addActionListener(e -> {
+            UserBUS userBUS = new UserBUS();
+            boolean removed = userBUS.removeMessage(message.getSender(), message.getReceiver(), timestamp);
+            if (removed) {
+                chatPanel.remove(card); // Remove the card from the chat panel
+                chatPanel.revalidate();
+                chatPanel.repaint();
+            } else {
+                JOptionPane.showMessageDialog(chatPanel, "Failed to remove message.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        // Use a panel to hold the remove button and add spacing
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0)); // Add horizontal gap
+        buttonPanel.add(removeButton);
+        card.add(buttonPanel, BorderLayout.WEST);
+        return card;
+    }
+
+    private static void searchMessages(JPanel resultsPanel, String searchText, User currentUser, String otherUsername) {
+        resultsPanel.removeAll();
+
+        UserBUS userBUS = new UserBUS();
+        List<ChatMessage> searchResults = userBUS.searchMessages(searchText, currentUser.getUsername(), otherUsername);
+
+        if (searchResults.isEmpty()) {
+            resultsPanel.add(new JLabel("No messages found."));
+        } else {
+            for (ChatMessage message : searchResults) {
+                if ((message.getSender().equals(currentUser.getUsername()) && message.getReceiver().equals(otherUsername)) || (message.getSender().equals(otherUsername) && message.getReceiver().equals(currentUser.getUsername()))) {
+                    // Get the current timestamp in the desired format
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    String timestamp = dateFormat.format(message.getTimestamp());
+                    JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+                    resultsPanel.add(messageCard);
+                }
+
             }
         }
 
-        chatPanel.revalidate();
-        chatPanel.repaint();
+        resultsPanel.revalidate();
+        resultsPanel.repaint();
     }
 
-    // Helper method to display a message in the chatPanel
+    // For when sending new message
     private static void displayMessage(JPanel chatPanel, String message, boolean isReceived, String otherUsername) {
         String currentUsername = getCurrentUser().getUsername();
         String senderUsername = isReceived ? otherUsername : currentUsername; // Determine sender based on isReceived
 
         // Get the current timestamp in the desired format
-        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
-        String timestamp = dateFormat.format(new Date());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm"); // Format with date and time
+        String formattedTimestamp = dateFormat.format(new Date());
 
-        JPanel messageCard = createMessageCard(senderUsername, message, timestamp); // Use createMessageCard
+        JPanel messageCard = createMessageCard(senderUsername, message, formattedTimestamp); // Use createMessageCard
 
         chatPanel.add(messageCard);
 
@@ -746,6 +891,7 @@ public class ChatApp implements Runnable{
         chatPanel.repaint();
     }
 
+    // For search message, show previous message
     private static JPanel createMessageCard(String username, String message, String timestamp) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
@@ -776,22 +922,17 @@ public class ChatApp implements Runnable{
         return card;
     }
 
-    private static JPanel createChatCard(String conversationName, JFrame frame) {
-        JPanel card = new JPanel();
-        card.setLayout(new BorderLayout());
+    private static JPanel createChatCard(String otherUsername, JFrame frame) {
+        JPanel card = new JPanel(new BorderLayout());
         card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         card.setBackground(new Color(240, 240, 240));
-        card.setPreferredSize(new Dimension(card.getPreferredSize().width, CARD_HEIGHT));
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
 
-        // Conversation name label
-        JLabel nameLabel = new JLabel(conversationName);
-        nameLabel.setFont(new Font("Arial", Font.PLAIN, 16));
-        card.add(nameLabel, BorderLayout.WEST);
+        JLabel usernameLabel = new JLabel(otherUsername);
+        card.add(usernameLabel, BorderLayout.CENTER);
 
-        // View button
-        JButton viewButton = new JButton("View");
-        viewButton.addActionListener(e -> openConversationDetailScreen(frame, conversationName));
+        JButton viewButton = new JButton("Chat");
+        viewButton.addActionListener(e -> openChatScreen(frame, getCurrentUser(), otherUsername));
         card.add(viewButton, BorderLayout.EAST);
 
         return card;
@@ -1112,6 +1253,550 @@ public class ChatApp implements Runnable{
 
 
         return friendCard;
+    }
+
+    private static void openChatListScreen(JFrame frame) {
+        JPanel chatListPanel = new JPanel(new BorderLayout());
+        chatListPanel.setBackground(Color.WHITE);
+
+        // Fetch the list of users with whom the current user has chatted
+        UserBUS userBUS = new UserBUS();
+        List<String> chattedUsers = userBUS.getChattedUsers(loggedInUser.getUsername());
+
+        if (chattedUsers.isEmpty()) {
+            JLabel noChatsLabel = new JLabel("No chats available.");
+            noChatsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            chatListPanel.add(noChatsLabel, BorderLayout.CENTER);
+        } else {
+            JPanel chatsListPanel = new JPanel();
+            chatsListPanel.setLayout(new BoxLayout(chatsListPanel, BoxLayout.Y_AXIS));
+
+            for (String otherUsername : chattedUsers) {
+                JPanel chatCard = createChatCard(otherUsername, frame);
+                chatsListPanel.add(chatCard);
+            }
+
+            JScrollPane scrollPane = new JScrollPane(chatsListPanel);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            chatListPanel.add(scrollPane, BorderLayout.CENTER);
+        }
+
+        // Wrap the content panel in a scrollable view
+        JScrollPane scrollPane = new JScrollPane(chatListPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder()); // Remove default border
+
+        // Replace the current content panel with the chat list panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(chatListPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    private static void openCreateGroupChatScreen(JFrame frame) {
+        // Create the content panel for the create group chat screen
+        JPanel createGroupPanel = new JPanel();
+        createGroupPanel.setLayout(new BorderLayout());
+        createGroupPanel.setBackground(Color.WHITE);
+
+        // Top bar - Group Name
+        JPanel topBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topBarPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JLabel groupNameLabel = new JLabel("Group Name:");
+        JTextField groupNameField = new JTextField(20);
+        topBarPanel.add(groupNameLabel);
+        topBarPanel.add(groupNameField);
+
+        // Content panel - Friend list
+        JPanel friendsPanel = new JPanel();
+        friendsPanel.setLayout(new BoxLayout(friendsPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(friendsPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        // Keep track of added friends
+        Set<String> addedFriends = new HashSet<>();
+
+        // Fetch and display the friend list for the current user
+        UserBUS userBUS = new UserBUS();
+        List<User> friends = userBUS.getFriendList(loggedInUser.getUsername());
+
+        // Sort the friends alphabetically by username
+        Collections.sort(friends, Comparator.comparing(User::getUsername));
+
+
+        for (User friend : friends) {
+            JPanel friendCard = createAddFriendCard(friend.getUsername(), friendsPanel, addedFriends);
+            friendsPanel.add(friendCard);
+        }
+
+        // Bottom bar - Create button
+        JPanel bottomBarPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JButton createButton = new JButton("Create");
+        createButton.addActionListener(e -> {
+            String groupName = groupNameField.getText().trim();
+            if (groupName.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please enter a group name.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            if (addedFriends.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Please add at least one friend to the group.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Add the creator to the group as an admin
+            List<String> groupMembers = new ArrayList<>(addedFriends);
+
+            // Create the group chat
+            int groupId = userBUS.createGroupChat(groupName, loggedInUser.getUsername(), groupMembers);
+            if (groupId > 0) {
+                JOptionPane.showMessageDialog(frame, "Group chat '" + groupName + "' created successfully!");
+                // Optionally, navigate to the newly created group chat or refresh the group chat list
+                openGroupChatScreen(frame);
+            } else {
+                JOptionPane.showMessageDialog(frame, "Failed to create group chat.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        bottomBarPanel.add(createButton);
+
+        // Add components to the create group panel
+        createGroupPanel.add(topBarPanel, BorderLayout.NORTH);
+        createGroupPanel.add(scrollPane, BorderLayout.CENTER);
+        createGroupPanel.add(bottomBarPanel, BorderLayout.SOUTH);
+
+        // Replace the current content panel with the create group panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(createGroupPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    // Use to add member (already friends with creator) in creat group chat
+    private static JPanel createAddFriendCard(String username, JPanel friendsPanel, Set<String> addedFriends) {
+        JPanel friendCard = new JPanel(new BorderLayout());
+        friendCard.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        friendCard.setBackground(new Color(240, 240, 240));
+        friendCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel usernameLabel = new JLabel(username);
+        friendCard.add(usernameLabel, BorderLayout.CENTER);
+
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(e -> {
+            addedFriends.add(username);
+            friendsPanel.remove(friendCard);
+            friendsPanel.revalidate();
+            friendsPanel.repaint();
+        });
+        friendCard.add(addButton, BorderLayout.EAST);
+
+        return friendCard;
+    }
+
+    private static void openGroupChatScreen(JFrame frame) {
+        JPanel groupChatPanel = new JPanel(new BorderLayout());
+        groupChatPanel.setBackground(Color.WHITE);
+
+        // Fetch and display the group chats for the current user
+        UserBUS userBUS = new UserBUS();
+        List<Group> groupChats = userBUS.getGroupChatsForUser(loggedInUser.getUsername());
+
+        // Display group chats or a message if none exist
+        if (groupChats.isEmpty()) {
+            JLabel noGroupsLabel = new JLabel("No group chats available.");
+            noGroupsLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            groupChatPanel.add(noGroupsLabel, BorderLayout.CENTER);
+        } else {
+            JPanel groupsListPanel = new JPanel();
+            groupsListPanel.setLayout(new BoxLayout(groupsListPanel, BoxLayout.Y_AXIS));
+
+            for (Group group : groupChats) {
+                JPanel groupCard = createGroupChatCard(group, frame);
+                groupsListPanel.add(groupCard);
+            }
+
+            JScrollPane scrollPane = new JScrollPane(groupsListPanel);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            groupChatPanel.add(scrollPane, BorderLayout.CENTER);
+        }
+
+        // Replace the current content panel with the group chat panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(groupChatPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    // Method to create a card for each group chat
+    private static JPanel createGroupChatCard(Group group, JFrame frame) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.setBackground(new Color(240, 240, 240));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel groupNameLabel = new JLabel(group.getGroupName());
+        card.add(groupNameLabel, BorderLayout.CENTER);
+
+        JButton viewButton = new JButton("View");
+        viewButton.addActionListener(e -> {
+            // Implement action to view the selected group chat
+            // This could involve opening a new panel for the group chat
+            openGroupChatDetailScreen(frame, group);
+        });
+        card.add(viewButton, BorderLayout.EAST);
+
+        return card;
+    }
+
+    private static void openGroupChatDetailScreen(JFrame frame, Group group) {
+        // Create the content panel for the group chat detail screen
+        JPanel groupChatDetailPanel = new JPanel();
+        groupChatDetailPanel.setLayout(new BorderLayout());
+        groupChatDetailPanel.setBackground(Color.WHITE);
+
+        // Top bar - Group Name and options
+        JPanel topBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topBarPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
+
+        JLabel groupNameLabel = new JLabel(group.getGroupName());
+        groupNameLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        topBarPanel.add(groupNameLabel);
+
+        // Check if the current user is an admin
+        UserBUS userBUS = new UserBUS();
+        if (userBUS.isAdmin(group.getGroupId(), loggedInUser.getUsername())) {
+            // Add member button
+            JButton manageMemberButton = new JButton("Manage Member");
+            manageMemberButton.addActionListener(e -> openManageMemberScreen(frame, group));
+            topBarPanel.add(manageMemberButton);
+
+            // Edit group name button
+            JButton editGroupNameButton = new JButton("Edit Group Name");
+            editGroupNameButton.addActionListener(e -> {
+                String newGroupName = JOptionPane.showInputDialog(frame, "Enter new group name:", group.getGroupName());
+                if (newGroupName != null && !newGroupName.trim().isEmpty()) {
+                    boolean success = userBUS.updateGroupName(group.getGroupId(), newGroupName);
+                    if (success) {
+                        JOptionPane.showMessageDialog(frame, "Group name updated successfully!");
+                        groupNameLabel.setText(newGroupName); // Update the label
+                        group.setGroupName(newGroupName); // Update the group object
+                        openGroupChatScreen(frame);
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Failed to update group name.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            });
+            topBarPanel.add(editGroupNameButton);
+        }
+
+        groupChatDetailPanel.add(topBarPanel, BorderLayout.NORTH);
+
+        // Panel for displaying messages
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(chatPanel);
+        groupChatDetailPanel.add(scrollPane, BorderLayout.CENTER);
+
+        List<GroupChatMessage> previousMessages = userBUS.getGroupChatMessages(group.getGroupId());
+        for (GroupChatMessage message : previousMessages) {
+            // Get the current timestamp in the desired format
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            String timestamp = dateFormat.format(message.getTimestamp());
+            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+            chatPanel.add(messageCard);
+        }
+
+        // Bottom bar - Message input
+        JPanel bottomBarPanel = new JPanel(new BorderLayout());
+        bottomBarPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
+
+        JTextField messageField = new JTextField();
+        JButton sendMessageButton = new JButton("Send");
+        sendMessageButton.addActionListener(e -> {
+            String messageText = messageField.getText().trim();
+            if (!messageText.isEmpty()) {
+                // Call UserBUS to send the message
+                boolean sent = userBUS.sendGroupMessage(group.getGroupId(), loggedInUser.getUsername(), messageText);
+                displayGroupMessage(chatPanel, messageText);
+                if (sent) {
+                    messageField.setText(""); // Clear the message field
+                    // Optionally, refresh the chat messages
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Failed to send message.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        bottomBarPanel.add(messageField, BorderLayout.CENTER);
+        bottomBarPanel.add(sendMessageButton, BorderLayout.EAST);
+        groupChatDetailPanel.add(bottomBarPanel, BorderLayout.SOUTH);
+
+        // Replace the current content panel with the group chat detail panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(groupChatDetailPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    // For when sending new message
+    private static void displayGroupMessage(JPanel chatPanel, String message) {
+        String currentUsername = getCurrentUser().getUsername();
+
+        // Get the current timestamp in the desired format
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm"); // Format with date and time
+        String formattedTimestamp = dateFormat.format(new Date());
+
+        JPanel messageCard = createMessageCard(currentUsername, message, formattedTimestamp); // Use createMessageCard
+
+        chatPanel.add(messageCard);
+
+        // Scroll to the bottom
+        JScrollBar verticalScrollBar = ((JScrollPane) chatPanel.getParent().getParent()).getVerticalScrollBar();
+        verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+
+        chatPanel.revalidate();
+        chatPanel.repaint();
+    }
+
+    // promote admin, demote admin, remove member
+    private static void openManageMemberScreen(JFrame frame, Group group) {
+        // Create the content panel for managing members
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BorderLayout());
+        contentPanel.setBackground(Color.WHITE);
+
+        // Top bar - Group Name
+        JPanel topBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topBarPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
+
+        JLabel groupNameLabel = new JLabel("Manage members in " + group.getGroupName());
+        groupNameLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        topBarPanel.add(groupNameLabel);
+
+        contentPanel.add(topBarPanel, BorderLayout.NORTH);
+
+        // Central panel - Member list
+        JPanel membersPanel = new JPanel();
+        membersPanel.setLayout(new BoxLayout(membersPanel, BoxLayout.Y_AXIS));
+        JScrollPane membersScrollPane = new JScrollPane(membersPanel);
+        membersScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        contentPanel.add(membersScrollPane, BorderLayout.CENTER);
+
+        // Fetch and display the member list
+        UserBUS userBUS = new UserBUS();
+        List<User> members = userBUS.getGroupMembers(group.getGroupId());
+        for (User member : members) {
+            JPanel memberCard = createMemberCard(frame, group, member, userBUS);
+            membersPanel.add(memberCard);
+        }
+
+        // Check if the current user is an admin
+        if (userBUS.isAdmin(group.getGroupId(), loggedInUser.getUsername())) {
+            // Add member button
+            JButton addMemberButton = new JButton("Add Member");
+            addMemberButton.addActionListener(e -> openAddMemberScreen(frame, group));
+            topBarPanel.add(addMemberButton);
+        }
+
+        // Replace the current content panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(contentPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    private static JPanel createMemberCard(JFrame frame, Group group, User member, UserBUS userBUS) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.setBackground(new Color(240, 240, 240));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel usernameLabel = new JLabel(member.getUsername());
+        card.add(usernameLabel, BorderLayout.WEST);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        // Check if the logged-in user is an admin
+        if (userBUS.isAdmin(group.getGroupId(), loggedInUser.getUsername())) {
+            // Add conditional buttons for admins only
+            if (!loggedInUser.getUsername().equals(member.getUsername())) { // Prevent admin from modifying their own status
+                if (userBUS.isAdmin(group.getGroupId(), member.getUsername())) {
+                    JButton demoteButton = new JButton("Demote");
+                    demoteButton.addActionListener(e -> {
+                        boolean success = userBUS.demoteAdmin(group.getGroupId(), loggedInUser.getUsername(), member.getUsername());
+                        if (success) {
+                            JOptionPane.showMessageDialog(frame, "Member demoted to regular member.");
+                            openManageMemberScreen(frame, group); // Refresh the screen
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Failed to demote member.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    buttonPanel.add(demoteButton);
+                } else {
+                    JButton promoteButton = new JButton("Promote");
+                    promoteButton.addActionListener(e -> {
+                        boolean success = userBUS.promoteMemberToAdmin(group.getGroupId(), loggedInUser.getUsername(), member.getUsername());
+                        if (success) {
+                            JOptionPane.showMessageDialog(frame, "Member promoted to admin.");
+                            openManageMemberScreen(frame, group); // Refresh the screen
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Failed to promote member.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    });
+                    buttonPanel.add(promoteButton);
+                }
+
+                JButton removeButton = new JButton("Remove");
+                removeButton.addActionListener(e -> {
+                    boolean success = userBUS.removeMemberFromGroup(group.getGroupId(), loggedInUser.getUsername(), member.getUsername());
+                    if (success) {
+                        JOptionPane.showMessageDialog(frame, "Member removed from group.");
+                        openManageMemberScreen(frame, group); // Refresh the screen
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Failed to remove member.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                });
+                buttonPanel.add(removeButton);
+            }
+        }
+
+        card.add(buttonPanel, BorderLayout.EAST);
+        return card;
+    }
+
+    private static void openAddMemberScreen(JFrame frame, Group group) {
+        // Create the content panel for adding a member
+        JPanel addMemberPanel = new JPanel();
+        addMemberPanel.setLayout(new BorderLayout());
+        addMemberPanel.setBackground(Color.WHITE);
+
+        // Top bar - Instructions
+        JPanel topBarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        topBarPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        JLabel instructionLabel = new JLabel("Select a friend to add:");
+        topBarPanel.add(instructionLabel);
+        addMemberPanel.add(topBarPanel, BorderLayout.NORTH);
+
+        // Content panel - Friend list
+        JPanel friendsPanel = new JPanel();
+        friendsPanel.setLayout(new BoxLayout(friendsPanel, BoxLayout.Y_AXIS));
+        JScrollPane scrollPane = new JScrollPane(friendsPanel);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        addMemberPanel.add(scrollPane, BorderLayout.CENTER);
+
+        // Fetch and display the friend list for the current user
+        UserBUS userBUS = new UserBUS();
+        List<User> friends = userBUS.getFriendList(loggedInUser.getUsername());
+
+        // Get the list of current group members
+        List<User> currentMembers = userBUS.getGroupMembers(group.getGroupId());
+        Set<String> currentMemberUsernames = new HashSet<>();
+        for (User member : currentMembers) {
+            currentMemberUsernames.add(member.getUsername());
+        }
+
+        // Sort the friends alphabetically by username
+        Collections.sort(friends, Comparator.comparing(User::getUsername));
+
+        for (User friend : friends) {
+            // Only display the friend card if the friend is not already a member
+            if (!currentMemberUsernames.contains(friend.getUsername())) {
+                JPanel friendCard = createAddMemberFriendCard(friend.getUsername(), group, friendsPanel);
+                friendsPanel.add(friendCard);
+            }
+        }
+
+        // Replace the current content panel with the add member panel
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(addMemberPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
+    }
+
+    private static JPanel createAddMemberFriendCard(String friendUsername, Group group, JPanel friendsPanel) {
+        JPanel friendCard = new JPanel(new BorderLayout());
+        friendCard.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        friendCard.setBackground(new Color(240, 240, 240));
+        friendCard.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel usernameLabel = new JLabel(friendUsername);
+        friendCard.add(usernameLabel, BorderLayout.CENTER);
+
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(e -> {
+            UserBUS userBUS = new UserBUS();
+            boolean added = userBUS.addMemberToGroup(group.getGroupId(), loggedInUser.getUsername(), friendUsername);
+            if (added) {
+                JOptionPane.showMessageDialog(friendsPanel, friendUsername + " added to the group successfully!");
+                friendsPanel.remove(friendCard);
+                friendsPanel.revalidate();
+                friendsPanel.repaint();
+            } else {
+                JOptionPane.showMessageDialog(friendsPanel, "Failed to add " + friendUsername + " to the group.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+        friendCard.add(addButton, BorderLayout.EAST);
+
+        return friendCard;
+    }
+
+    // chat in general ->menu(individual/group)
+    private static void openChattingScreen(JFrame frame) {
+        // Create the content panel for the friend list
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBackground(Color.WHITE);
+
+        JPanel topBarPanel = new JPanel();
+        topBarPanel.setLayout(new BoxLayout(topBarPanel, BoxLayout.X_AXIS));
+        topBarPanel.setBackground(Color.WHITE);
+
+        // Add title label
+        JLabel titleLabel = new JLabel("Chatting");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
+        topBarPanel.add(titleLabel);
+
+        // Menu button
+        JButton menuButton = new JButton("Choose individual or group chat");
+        menuButton.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        topBarPanel.add(menuButton);
+
+        contentPanel.add(topBarPanel);
+
+        // Create the popup menu
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        // Spam Report menu item
+        JMenuItem oneMenuItem = new JMenuItem("Individual");
+        oneMenuItem.setForeground(Color.BLACK);
+        oneMenuItem.addActionListener(e -> openChatListScreen(frame));
+
+        // Clear Chat History menu item
+        JMenuItem groupMenuItem = new JMenuItem("Group");
+        groupMenuItem.setForeground(Color.BLACK);
+        groupMenuItem.addActionListener(e -> openGroupChatScreen(frame));
+
+        // Add menu items to the popup menu
+        popupMenu.add(oneMenuItem);
+        popupMenu.add(groupMenuItem);
+
+        // Add action listener to the menu button
+        menuButton.addActionListener(e -> {
+            popupMenu.show(menuButton, 0, menuButton.getHeight());
+        });
+
+        frame.getContentPane().removeAll();
+        frame.add(createSidebar(frame), BorderLayout.WEST);
+        frame.add(contentPanel, BorderLayout.CENTER);
+        frame.revalidate();
+        frame.repaint();
     }
 
 
