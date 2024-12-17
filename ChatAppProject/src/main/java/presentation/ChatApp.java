@@ -118,6 +118,11 @@ public class ChatApp implements Runnable {
 
     private static void handleIncomingMessage(String message) {
         SwingUtilities.invokeLater(() -> {
+            if (chatPanel == null) {
+                chatPanel = new JPanel();
+                chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+            }
+
             if (!message.contains("\\|")) {
                 String[] parts = message.split("\\|");
                 System.out.println(parts[0] + ": " + parts[1] + ": " + parts[2]);
@@ -129,7 +134,9 @@ public class ChatApp implements Runnable {
                 UserBUS userBUS = new UserBUS();
 
                 if (userBUS.isUserInGroup(groupID, loggedInUser.getUsername())) {
-                    displayMessage(chatPanel, content, true, sender);
+                    System.out.println("Message sent 678: " + content);
+
+                    displayGroupMessage(chatPanel, content);
                     System.out.println("Message sent: " + content);
                 }
                 return;
@@ -1664,7 +1671,7 @@ public class ChatApp implements Runnable {
         groupChatDetailPanel.add(topBarPanel, BorderLayout.NORTH);
 
         // Panel for displaying messages
-        JPanel chatPanel = new JPanel();
+        chatPanel = new JPanel();
         chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
         JScrollPane scrollPane = new JScrollPane(chatPanel);
         groupChatDetailPanel.add(scrollPane, BorderLayout.CENTER);
