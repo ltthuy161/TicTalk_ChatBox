@@ -19,6 +19,9 @@ import java.io.*;
 import java.net.*;
 import java.sql.Timestamp;
 import java.util.List;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.Cursor;
 
 public class ChatApp implements Runnable{
     private static final int CARD_HEIGHT = 60;
@@ -182,7 +185,6 @@ public class ChatApp implements Runnable{
         out.println(formattedMessage);
         System.out.println("Message sent: " + formattedMessage);
     }
-
 
     private static User getCurrentUser() {
         return loggedInUser;
@@ -373,9 +375,10 @@ public class ChatApp implements Runnable{
                 // Display only messages where the current user is the sender or receiver
                 if (message.getSender().equals(currentUsername) || message.getReceiver().equals(currentUsername)) {
                     // Get the current timestamp in the desired format
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
                     String timestamp = dateFormat.format(message.getTimestamp());
-                    JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+
+                    JPanel messageCard = createClickableMessageCard(message.getSender(), message.getReceiver(), message.getMessage(), timestamp, message.getTimestamp());
                     resultsPanel.add(messageCard);
                 }
             }
@@ -713,7 +716,7 @@ public class ChatApp implements Runnable{
         frame.repaint();
     }
 
-    private static void openChatScreen(JFrame frame, User currentUser, String otherUsername) {
+    private static void openChatScreen(JFrame frame, User currentUser, String otherUsername, Timestamp targetTimestamp) {
         // Main content panel
         JPanel contentPanel = new JPanel(new BorderLayout());
 
@@ -757,11 +760,31 @@ public class ChatApp implements Runnable{
         UserBUS userBUS = new UserBUS();
         List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
         for (ChatMessage message : previousMessages) {
-            // Get the current timestamp in the desired format
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            String timestamp = dateFormat.format(message.getTimestamp());
-            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+
+            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), message.getTimestamp());
             chatPanel.add(messageCard);
+        }
+
+        // Handle auto-scroll if a target timestamp is provided
+        if(targetTimestamp!=null){
+            // Get the current timestamp in the desired format
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+            String timestamp = dateFormat.format(targetTimestamp);
+            SwingUtilities.invokeLater(() -> {
+                for (Component comp : chatPanel.getComponents()) {
+                    if (comp instanceof JPanel) {
+                        JPanel messagePanel = (JPanel) comp;
+                        if (messagePanel.getComponentCount() > 0 && messagePanel.getComponent(1) instanceof JLabel) {
+                            JLabel timestampLabel = (JLabel) messagePanel.getComponent(1);
+                            if (timestampLabel.getText().equals(timestamp)) {
+                                Rectangle viewRect = messagePanel.getBounds();
+                                scrollPane.getViewport().scrollRectToVisible(viewRect);
+                                break;
+                            }
+                        }
+                    }
+                }
+            });
         }
 
         // Action listener for the Send button
@@ -845,6 +868,7 @@ public class ChatApp implements Runnable{
             }
         });
 
+
         // Add menu items to the popup menu
         popupMenu.add(spamReportMenuItem);
         popupMenu.add(removeMessageMenuItem);
@@ -862,6 +886,9 @@ public class ChatApp implements Runnable{
         frame.repaint();
     }
 
+    private static void openChatScreen(JFrame frame, User currentUser, String otherUsername) {
+        openChatScreen(frame, currentUser, otherUsername, null);
+    }
     private static void openRemoveMessageScreen(JFrame frame, User currentUser, String otherUsername) {
         // Main content panel
         JPanel contentPanel = new JPanel(new BorderLayout());
@@ -960,9 +987,9 @@ public class ChatApp implements Runnable{
             for (ChatMessage message : searchResults) {
                 if ((message.getSender().equals(currentUser.getUsername()) && message.getReceiver().equals(otherUsername)) || (message.getSender().equals(otherUsername) && message.getReceiver().equals(currentUser.getUsername()))) {
                     // Get the current timestamp in the desired format
-                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
                     String timestamp = dateFormat.format(message.getTimestamp());
-                    JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+                    JPanel messageCard = createClickableMessageCard(message.getSender(), message.getReceiver(), message.getMessage(), timestamp, message.getTimestamp());
                     resultsPanel.add(messageCard);
                 }
 
@@ -979,8 +1006,8 @@ public class ChatApp implements Runnable{
         String senderUsername = isReceived ? otherUsername : currentUsername;
 
         // Get the current timestamp in the desired format
-        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
-        String timestamp = dateFormat.format(new Date());
+        java.util.Date date = new java.util.Date();
+        Timestamp timestamp = new Timestamp(date.getTime());
 
         JPanel messageCard = createMessageCard(senderUsername, message, timestamp); // Use createMessageCard
 
@@ -995,7 +1022,7 @@ public class ChatApp implements Runnable{
     }
 
     // For search message, show previous message
-    private static JPanel createMessageCard(String username, String message, String timestamp) {
+    private static JPanel createMessageCard(String username, String message, Timestamp timestamp) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
         card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -1007,7 +1034,9 @@ public class ChatApp implements Runnable{
         JLabel usernameLabel = new JLabel(username);
         usernameLabel.setFont(new Font("Arial", Font.BOLD, 14));
 
-        JLabel timestampLabel = new JLabel(timestamp);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        String time = dateFormat.format(timestamp);
+        JLabel timestampLabel = new JLabel(time);
         timestampLabel.setFont(new Font("Arial", Font.ITALIC, 12));
         timestampLabel.setForeground(Color.GRAY);
 
@@ -1608,7 +1637,7 @@ public class ChatApp implements Runnable{
             // Get the current timestamp in the desired format
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
             String timestamp = dateFormat.format(message.getTimestamp());
-            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), message.getTimestamp());
             chatPanel.add(messageCard);
         }
 
@@ -1650,10 +1679,10 @@ public class ChatApp implements Runnable{
         String currentUsername = getCurrentUser().getUsername();
 
         // Get the current timestamp in the desired format
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm"); // Format with date and time
-        String formattedTimestamp = dateFormat.format(new Date());
+        java.util.Date date = new java.util.Date();
+        Timestamp timestamp = new Timestamp(date.getTime());
 
-        JPanel messageCard = createMessageCard(currentUsername, message, formattedTimestamp); // Use createMessageCard
+        JPanel messageCard = createMessageCard(currentUsername, message, timestamp); // Use createMessageCard
 
         chatPanel.add(messageCard);
 
@@ -1902,6 +1931,67 @@ public class ChatApp implements Runnable{
         frame.repaint();
     }
 
+    private static JPanel createClickableMessageCard(String senderUsername, String receiverUsername, String message, String timestamp, Timestamp messageTimestamp) {
+        JPanel card = new JPanel();
+        card.setLayout(new BorderLayout());
+        card.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        card.setBackground(new Color(230, 230, 230));
+        card.setPreferredSize(new Dimension(card.getPreferredSize().width, CARD_HEIGHT));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, CARD_HEIGHT));
+
+        JLabel usernameLabel = new JLabel(senderUsername);
+        usernameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+
+        JLabel timestampLabel = new JLabel(timestamp);
+        timestampLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+        timestampLabel.setForeground(Color.GRAY);
+
+        JLabel messageLabel = new JLabel(message);
+        messageLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BorderLayout());
+        textPanel.add(usernameLabel, BorderLayout.NORTH);
+        textPanel.add(messageLabel, BorderLayout.CENTER);
+
+        card.add(textPanel, BorderLayout.CENTER);
+        card.add(timestampLabel, BorderLayout.EAST);
+
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                JFrame frame = (JFrame) SwingUtilities.getWindowAncestor(card);
+                User currentUser = getCurrentUser();
+                // Determine which username to use for the chat screen
+                String otherUsername;
+                if (senderUsername.equals(currentUser.getUsername())){
+                    otherUsername = receiverUsername;
+                }else {
+                    otherUsername = senderUsername;
+                }
+                openChatScreen(frame, currentUser, otherUsername, messageTimestamp);
+            }
+        });
+
+        // Add an underline on hover for visual feedback
+        card.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                usernameLabel.setText("<html><u>" + senderUsername + "</u></html>");
+                messageLabel.setText("<html><u>" + message + "</u></html>");
+
+                card.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                usernameLabel.setText(senderUsername);
+                messageLabel.setText(message);
+                card.setCursor(Cursor.getDefaultCursor());
+            }
+        });
+
+        return card;
+    }
 
     @Override
     public void run() {
