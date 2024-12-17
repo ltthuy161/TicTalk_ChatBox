@@ -123,7 +123,6 @@ public class ChatApp implements Runnable{
             // Split the message into parts based on the | delimiter
 
             String[] parts = message.split(":");
-            System.out.println("vcl: " + parts[0] + " " + parts[1]);
             if (parts.length == 2) {
                 // The message is expected to have 3 parts: sender|recipient|content
                 String sender = parts[0].trim(); // Recipient's username
