@@ -380,4 +380,7 @@ public class UserBUS {
         return userDAO.removeMessage(currentusername, otherusername, timestamp);
     }
 
+    public boolean isUserInGroup(int groupId, String username) {
+        return userDAO.isGroupMember(groupId, username);
+    }
 }

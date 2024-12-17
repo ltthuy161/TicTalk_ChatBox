@@ -23,7 +23,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.Cursor;
 
-public class ChatApp implements Runnable{
+public class ChatApp implements Runnable {
     private static final int CARD_HEIGHT = 60;
     private static User loggedInUser;
     private static JPanel chatPanel; // Global chat panel for the active chat screen
@@ -33,7 +33,7 @@ public class ChatApp implements Runnable{
     private static PrintWriter out;
     private static BufferedReader in;
     private static String serverAddress = "localhost"; // Server IP (change if needed)
-    private static int serverPort = 6000; // Server Port (match the ChatServer)
+    private static int serverPort = 6500; // Server Port (match the ChatServer)
 
     public static void main(User user) {
 
@@ -77,6 +77,7 @@ public class ChatApp implements Runnable{
 
         frame.setVisible(true);
     }
+
     private static void connectToServer() {
         try {
             socket = new Socket(serverAddress, serverPort);
@@ -91,6 +92,7 @@ public class ChatApp implements Runnable{
             new Thread(() -> {
                 try {
                     String message;
+                    System.out.println("Waiting for message...");
                     while (true) {
                         // Check for new messages every 1 second
                         if (in.ready()) {  // If there is a message to read
@@ -116,16 +118,27 @@ public class ChatApp implements Runnable{
 
     private static void handleIncomingMessage(String message) {
         SwingUtilities.invokeLater(() -> {
-            if (!message.contains(":")) {
-                // Handle server announcements (messages without the | delimiter)
-                JOptionPane.showMessageDialog(null, message, "Server Message", JOptionPane.INFORMATION_MESSAGE);
-                System.out.println("Server message received: " + message);
+            if (!message.contains("\\|")) {
+                String[] parts = message.split("\\|");
+                System.out.println(parts[0] + ": " + parts[1] + ": " + parts[2]);
+
+                String sender = parts[0].trim();
+                int groupID = Integer.parseInt(parts[1].trim());
+                String content = parts[2].trim();
+
+                UserBUS userBUS = new UserBUS();
+
+                if (userBUS.isUserInGroup(groupID, loggedInUser.getUsername())) {
+                    displayMessage(chatPanel, content, true, sender);
+                    System.out.println("Message sent: " + content);
+                }
                 return;
             }
 
             // Split the message into parts based on the | delimiter
 
             String[] parts = message.split(":");
+
             if (parts.length == 2) {
                 // The message is expected to have 3 parts: sender|recipient|content
                 String sender = parts[0].trim(); // Recipient's username
@@ -139,9 +152,9 @@ public class ChatApp implements Runnable{
                 if (recipient.equals(loggedInUser.getUsername())) {
                     System.out.println("User has logged in!");
 
-                        // Display the message on the open chat screen
-                        displayMessage(chatPanel, content, true, sender);
-                        System.out.println("Message displayed for recipient: " + recipient);
+                    // Display the message on the open chat screen
+                    displayMessage(chatPanel, content, true, sender);
+                    System.out.println("Message displayed for recipient: " + recipient);
 
                 }
             } else {
@@ -161,6 +174,30 @@ public class ChatApp implements Runnable{
     private static void setChatScreenOpen(String username, boolean isOpen) {
         openChatScreens.put(username, isOpen);
     }
+
+    private static void sendGroupMessage(String message, int groupId) {
+        if (socket == null || socket.isClosed()) {
+            JOptionPane.showMessageDialog(null, "Not connected to the server!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Xử lý để loại bỏ ký tự đặc biệt như "|"
+        String sanitizedMessage = message.replace("|", "");
+        String formattedMessage = loggedInUser.getUsername() + "|" + groupId + "|" + sanitizedMessage;
+
+        // Lưu tin nhắn vào cơ sở dữ liệu (nếu cần)
+        UserBUS userBUS = new UserBUS();
+        boolean isSaved = userBUS.sendGroupMessage(groupId, loggedInUser.getUsername(), sanitizedMessage);
+        if (!isSaved) {
+            JOptionPane.showMessageDialog(null, "Failed to save message to the database!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Gửi tin nhắn tới server (tất cả thành viên nhóm sẽ nhận được tin nhắn)
+        out.println(formattedMessage);
+        System.out.println("Group message sent: " + formattedMessage);
+    }
+
 
     private static void sendMessage(String recipient, String message) {
         if (socket == null || socket.isClosed()) {
@@ -1649,16 +1686,15 @@ public class ChatApp implements Runnable{
         JButton sendMessageButton = new JButton("Send");
         sendMessageButton.addActionListener(e -> {
             String messageText = messageField.getText().trim();
+
             if (!messageText.isEmpty()) {
-                // Call UserBUS to send the message
-                boolean sent = userBUS.sendGroupMessage(group.getGroupId(), loggedInUser.getUsername(), messageText);
+
+                // Call the method to send the group message
+                sendGroupMessage(messageText, group.getGroupId());
+
+                // Display the group message on the chat panel
                 displayGroupMessage(chatPanel, messageText);
-                if (sent) {
-                    messageField.setText(""); // Clear the message field
-                    // Optionally, refresh the chat messages
-                } else {
-                    JOptionPane.showMessageDialog(frame, "Failed to send message.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
+                messageField.setText(""); // Clear input
             }
         });
 

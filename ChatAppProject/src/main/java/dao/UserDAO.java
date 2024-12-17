@@ -623,7 +623,7 @@ public class UserDAO {
     }
 
     public int createGroup(Group group) {
-        String sql = "INSERT INTO `Groups` (GroupName, CreatedBy) VALUES (?, ?)";
+        String sql = "INSERT INTO Groups (GroupName, CreatedBy) VALUES (?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
@@ -696,7 +696,7 @@ public class UserDAO {
 
     public List<Group> getGroupsByParticipant(String username) {
         List<Group> groups = new ArrayList<>();
-        String sql = "SELECT g.* FROM `Groups` g INNER JOIN GroupParticipants gp ON g.GroupID = gp.GroupID WHERE gp.Username = ?";
+        String sql = "SELECT g.* FROM Groups g INNER JOIN GroupParticipants gp ON g.GroupID = gp.GroupID WHERE gp.Username = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -872,7 +872,5 @@ public class UserDAO {
             return false;
         }
     }
-
-
 }
 
