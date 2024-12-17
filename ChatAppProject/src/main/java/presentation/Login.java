@@ -233,6 +233,12 @@ public class Login extends javax.swing.JFrame {
         User user = userBUS.authenticateUser(username, password);
 
         if (user != null) {
+            // Check if user account is locked or not
+            if (userBUS.isLocked(user)) {
+                JOptionPane.showMessageDialog(this, "Your account is locked. Please contact support.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             // Authentication successful
             JOptionPane.showMessageDialog(this, "Sign in successful!", "Success", JOptionPane.INFORMATION_MESSAGE);
 

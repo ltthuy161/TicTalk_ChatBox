@@ -12,31 +12,31 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
-import java.util.Date;
 import java.io.*;
 import java.net.*;
 import java.sql.Timestamp;
+import java.util.List;
 
 public class ChatApp implements Runnable{
     private static final int CARD_HEIGHT = 60;
     private static User loggedInUser;
+    private static JPanel chatPanel; // Global chat panel for the active chat screen
 
     //socket
     private static Socket socket;
     private static PrintWriter out;
     private static BufferedReader in;
     private static String serverAddress = "localhost"; // Server IP (change if needed)
-    private static int serverPort = 5000; // Server Port (match the ChatServer)
+    private static int serverPort = 6000; // Server Port (match the ChatServer)
 
     public static void main(User user) {
+
         loggedInUser = user;
 
+        connectToServer();
         // Create the main frame
         JFrame frame = new JFrame("Chat App");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -74,6 +74,116 @@ public class ChatApp implements Runnable{
 
         frame.setVisible(true);
     }
+    private static void connectToServer() {
+        try {
+            socket = new Socket(serverAddress, serverPort);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            // Notify the server of the connected user
+            out.println(loggedInUser.getUsername());
+            System.out.println("Connected to the chat server as: " + loggedInUser.getUsername());
+
+            // Listener thread for real-time messages
+            new Thread(() -> {
+                try {
+                    String message;
+                    while (true) {
+                        // Check for new messages every 1 second
+                        if (in.ready()) {  // If there is a message to read
+                            message = in.readLine();
+                            System.out.println("Incoming message: " + message); // Debugging
+                            handleIncomingMessage(message);
+                        }
+                        // Sleep for 1 second before checking for new messages again
+                        Thread.sleep(1000);
+                    }
+                } catch (IOException e) {
+                    System.err.println("Disconnected from server: " + e.getMessage());
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }).start();
+
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Unable to connect to the server!", "Connection Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+        }
+    }
+
+    private static void handleIncomingMessage(String message) {
+        SwingUtilities.invokeLater(() -> {
+            if (!message.contains(":")) {
+                // Handle server announcements (messages without the | delimiter)
+                JOptionPane.showMessageDialog(null, message, "Server Message", JOptionPane.INFORMATION_MESSAGE);
+                System.out.println("Server message received: " + message);
+                return;
+            }
+
+            // Split the message into parts based on the | delimiter
+
+            String[] parts = message.split(":");
+            System.out.println("vcl: " + parts[0] + " " + parts[1]);
+            if (parts.length == 2) {
+                // The message is expected to have 3 parts: sender|recipient|content
+                String sender = parts[0].trim(); // Recipient's username
+                String content = parts[1].trim();   // The message content
+                String recipient = getCurrentUser().getUsername();
+                System.out.println("sender: " + sender);
+                System.out.println("content: " + content);
+                System.out.println("recipient: " + recipient);
+                // Check if the message is for the logged-in user (recipient)
+                System.out.println("user: " + loggedInUser.getUsername());
+                if (recipient.equals(loggedInUser.getUsername())) {
+                    System.out.println("User has logged in!");
+
+                        // Display the message on the open chat screen
+                        displayMessage(chatPanel, content, true, sender);
+                        System.out.println("Message displayed for recipient: " + recipient);
+
+                }
+            } else {
+                // Handle invalid message format
+                System.err.println("Invalid message format: " + message);
+            }
+        });
+    }
+
+    private static Map<String, Boolean> openChatScreens = new HashMap<>();
+
+    // Check if a chat screen with a specific user is open
+    private static boolean isChatScreenOpen(String sender) {
+        return openChatScreens.getOrDefault(sender, false);
+    }
+
+    private static void setChatScreenOpen(String username, boolean isOpen) {
+        openChatScreens.put(username, isOpen);
+    }
+
+    private static void sendMessage(String recipient, String message) {
+        if (socket == null || socket.isClosed()) {
+            JOptionPane.showMessageDialog(null, "Not connected to the server!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Xử lý để loại bỏ ký tự đặc biệt như "|"
+        String sanitizedMessage = message.replace("|", "");
+        String formattedMessage = loggedInUser.getUsername() + "|" + recipient + "|" + sanitizedMessage;
+
+        // Lưu tin nhắn vào cơ sở dữ liệu
+        UserBUS userBUS = new UserBUS();
+        boolean isSaved = userBUS.sendMessage(loggedInUser.getUsername(), recipient, sanitizedMessage);
+        if (!isSaved) {
+            JOptionPane.showMessageDialog(null, "Failed to save message to the database!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+
+        // Gửi tin nhắn tới server
+        out.println(formattedMessage);
+        System.out.println("Message sent: " + formattedMessage);
+    }
+
 
     private static User getCurrentUser() {
         return loggedInUser;
@@ -630,7 +740,7 @@ public class ChatApp implements Runnable{
         contentPanel.add(topPanel, BorderLayout.NORTH);
 
         // Panel for displaying messages
-        JPanel chatPanel = new JPanel();
+        chatPanel = new JPanel(); // Initialize global chat panel
         chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
         JScrollPane scrollPane = new JScrollPane(chatPanel);
         contentPanel.add(scrollPane, BorderLayout.CENTER);
@@ -648,27 +758,16 @@ public class ChatApp implements Runnable{
         UserBUS userBUS = new UserBUS();
         List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
         for (ChatMessage message : previousMessages) {
-            // Get the current timestamp in the desired format
-            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
-            String timestamp = dateFormat.format(message.getTimestamp());
-            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
-            chatPanel.add(messageCard);
+            displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
         }
 
         // Action listener for the Send button
         sendButton.addActionListener(e -> {
             String messageText = messageField.getText().trim();
             if (!messageText.isEmpty()) {
-                // Display the message on the chat screen
-                displayMessage(chatPanel, messageText, false, otherUsername);
-
-                // Send the message (using UserBUS)
-                boolean success = userBUS.sendMessage(currentUser.getUsername(), otherUsername, messageText);
-                if (!success) {
-                    JOptionPane.showMessageDialog(contentPanel, "Error sending message.", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-
-                messageField.setText(""); // Clear the message field
+                sendMessage(otherUsername, messageText); // Use the real-time send method
+                displayMessage(chatPanel, messageText, false, otherUsername); // Display locally
+                messageField.setText(""); // Clear input
             }
         });
 
@@ -873,13 +972,13 @@ public class ChatApp implements Runnable{
     // For when sending new message
     private static void displayMessage(JPanel chatPanel, String message, boolean isReceived, String otherUsername) {
         String currentUsername = getCurrentUser().getUsername();
-        String senderUsername = isReceived ? otherUsername : currentUsername; // Determine sender based on isReceived
+        String senderUsername = isReceived ? otherUsername : currentUsername;
 
         // Get the current timestamp in the desired format
-        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm"); // Format with date and time
-        String formattedTimestamp = dateFormat.format(new Date());
+        SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm");
+        String timestamp = dateFormat.format(new Date());
 
-        JPanel messageCard = createMessageCard(senderUsername, message, formattedTimestamp); // Use createMessageCard
+        JPanel messageCard = createMessageCard(senderUsername, message, timestamp); // Use createMessageCard
 
         chatPanel.add(messageCard);
 

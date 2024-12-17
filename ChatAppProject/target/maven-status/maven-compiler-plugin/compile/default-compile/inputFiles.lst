@@ -1,0 +1,13 @@
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/bus/UserBUS.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dao/DatabaseConnection.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dao/TestConnection.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dao/UserDAO.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dto/ChatMessage.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dto/FriendRequest.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/dto/User.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/ChatApp.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/ChatSocketClient.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/ChatSocketServer.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/InitResetPassword.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/Login.java
+/Users/thanhthuy/TicTalk_ChatBox/ChatAppProject/src/main/java/presentation/Signup.java

@@ -13,6 +13,25 @@ import java.util.ArrayList;
 
 
 public class UserDAO {
+
+    public boolean isLocked(User user) {
+        String sql = "SELECT Status FROM Users WHERE Username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, user.getUsername());
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    // Check if the status is "Locked"
+                    String status = rs.getString("Status");
+                    return "Locked".equalsIgnoreCase(status); // Case-insensitive comparison
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false; // Return false if user is not found or any exception occurs
+    }
+
     public boolean insertUser(User user) {
         String sql = "INSERT INTO Users (Username, FullName, Address, DateOfBirth, Gender, Email, Password) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -107,14 +126,25 @@ public class UserDAO {
     }
 
     public boolean setUserOnline(String username) {
-        String sql = "UPDATE Users SET IsOnline = TRUE WHERE Username = ?";
+        String updateOnlineStatusSql = "UPDATE Users SET IsOnline = TRUE WHERE Username = ?";
+        String insertLoginHistorySql = "INSERT INTO LoginHistory (Username, LoginTime) VALUES (?, CURRENT_TIMESTAMP)";
+
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement updateStmt = conn.prepareStatement(updateOnlineStatusSql);
+             PreparedStatement insertStmt = conn.prepareStatement(insertLoginHistorySql)) {
 
-            stmt.setString(1, username);
+            // Update IsOnline status
+            updateStmt.setString(1, username);
+            int affectedRows = updateStmt.executeUpdate();
 
-            int affectedRows = stmt.executeUpdate();
-            return affectedRows > 0;
+            if (affectedRows > 0) {
+                // Add entry to LoginHistory
+                insertStmt.setString(1, username);
+                insertStmt.executeUpdate();
+                return true;
+            } else {
+                return false; // No rows updated, user not found or error
+            }
         } catch (Exception e) {
             e.printStackTrace();
             // Handle the exception appropriately (log, rethrow, etc.)
@@ -123,14 +153,25 @@ public class UserDAO {
     }
 
     public boolean setUserOffline(String username) {
-        String sql = "UPDATE Users SET IsOnline = FALSE WHERE Username = ?";
+        String updateOfflineStatusSql = "UPDATE Users SET IsOnline = FALSE WHERE Username = ?";
+        String insertLogOutHistorySql = "INSERT INTO LogOutHistory (Username, LogOutTime) VALUES (?, CURRENT_TIMESTAMP)";
+
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             PreparedStatement updateStmt = conn.prepareStatement(updateOfflineStatusSql);
+             PreparedStatement insertStmt = conn.prepareStatement(insertLogOutHistorySql)) {
 
-            stmt.setString(1, username);
+            // Update IsOnline status
+            updateStmt.setString(1, username);
+            int affectedRows = updateStmt.executeUpdate();
 
-            int affectedRows = stmt.executeUpdate();
-            return affectedRows > 0;
+            if (affectedRows > 0) {
+                // Add entry to LogOutHistory
+                insertStmt.setString(1, username);
+                insertStmt.executeUpdate();
+                return true;
+            } else {
+                return false; // No rows updated, user not found or error
+            }
         } catch (Exception e) {
             e.printStackTrace();
             // Handle the exception appropriately (log, rethrow, etc.)
@@ -405,13 +446,15 @@ public class UserDAO {
     }
 
     public boolean sendMessage(String sender, String receiver, String message) {
-        String sql = "INSERT INTO PeopleChat (SenderUsername, ReceiverUsername, Message) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO PeopleChat (SenderUsername, ReceiverUsername, Message, Timestamp) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, sender);
             stmt.setString(2, receiver);
             stmt.setString(3, message);
+
+            stmt.setTimestamp(4, new java.sql.Timestamp(System.currentTimeMillis()));
 
             int affectedRows = stmt.executeUpdate();
             return affectedRows > 0;

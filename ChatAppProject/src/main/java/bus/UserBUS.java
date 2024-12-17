@@ -99,6 +99,9 @@ public class UserBUS {
         return userDAO.insertUser(user);
     }
 
+    public boolean isLocked(User user) {
+        return userDAO.isLocked(user);
+    }
 
     public boolean updateUserPassword(String username, String newPassword) {
         return userDAO.updateUserPassword(username, newPassword);
