@@ -757,7 +757,11 @@ public class ChatApp implements Runnable{
         UserBUS userBUS = new UserBUS();
         List<ChatMessage> previousMessages = userBUS.getChatMessages(currentUser.getUsername(), otherUsername);
         for (ChatMessage message : previousMessages) {
-            displayMessage(chatPanel, message.getMessage(), !message.getSender().equals(currentUser.getUsername()), otherUsername);
+            // Get the current timestamp in the desired format
+            SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+            String timestamp = dateFormat.format(message.getTimestamp());
+            JPanel messageCard = createMessageCard(message.getSender(), message.getMessage(), timestamp);
+            chatPanel.add(messageCard);
         }
 
         // Action listener for the Send button
@@ -896,6 +900,7 @@ public class ChatApp implements Runnable{
         frame.revalidate();
         frame.repaint();
     }
+
     private static JPanel createRemoveMessageCard(ChatMessage message, Timestamp timestamp, JPanel chatPanel) {
         JPanel card = new JPanel();
         card.setLayout(new BorderLayout());
