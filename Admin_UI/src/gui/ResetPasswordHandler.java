@@ -66,7 +66,7 @@ public class ResetPasswordHandler {
     }
 
     private String generateRandomPassword(int length) {
-        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789@#$%";
+        String characters = "abcdefghijklmnopqrstuvwxyz0123456789";
         StringBuilder password = new StringBuilder();
         Random random = new Random();
 
@@ -95,7 +95,7 @@ public class ResetPasswordHandler {
 
     private boolean sendPasswordToEmail(String email, String newPassword) {
         String fromEmail = "tictalktoday@gmail.com"; // Replace with your email
-        String emailPassword = "bzxl yocx jrve gkho"; // Replace with App Password
+        String emailPassword = "nind hnpu btkf oztb"; // Replace with App Password
         String host = "smtp.gmail.com";
 
         Properties properties = new Properties();

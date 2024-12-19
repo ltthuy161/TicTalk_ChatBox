@@ -118,12 +118,8 @@ public class ChatApp implements Runnable {
 
     private static void handleIncomingMessage(String message) {
         SwingUtilities.invokeLater(() -> {
-            if (chatPanel == null) {
-                chatPanel = new JPanel();
-                chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
-            }
-
-            if (!message.contains("\\|")) {
+            System.out.println("Kekee: " + message);
+            if (!message.contains(":")) {
                 String[] parts = message.split("\\|");
                 System.out.println(parts[0] + ": " + parts[1] + ": " + parts[2]);
 
@@ -134,15 +130,13 @@ public class ChatApp implements Runnable {
                 UserBUS userBUS = new UserBUS();
 
                 if (userBUS.isUserInGroup(groupID, loggedInUser.getUsername())) {
-                    System.out.println("Message sent 678: " + content);
+                    System.out.println("Message sent: " + content);
 
-                    displayGroupMessage(chatPanel, content);
+                    displayMessage(chatPanel, content, true, sender);
                     System.out.println("Message sent: " + content);
                 }
                 return;
             }
-
-            // Split the message into parts based on the | delimiter
 
             String[] parts = message.split(":");
 
